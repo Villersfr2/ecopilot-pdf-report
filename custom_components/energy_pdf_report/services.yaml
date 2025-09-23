@@ -1,0 +1,25 @@
+generate:
+  name: Générer un rapport PDF
+  description: Génère un rapport PDF pour le tableau de bord énergie.
+  fields:
+    start_date:
+      name: Date de début
+      description: Date locale de début (inclus) pour l'analyse.
+      example: "2024-01-01"
+    end_date:
+      name: Date de fin
+      description: Date locale de fin (inclus) pour l'analyse.
+      example: "2024-01-31"
+    period:
+      name: Granularité
+      description: Granularité utilisée pour la récupération des statistiques (day, week, month).
+      example: day
+      default: day
+    filename:
+      name: Nom du fichier
+      description: Nom du fichier PDF généré (extension .pdf ajoutée si nécessaire).
+    output_dir:
+      name: Répertoire de sortie
+      description: Répertoire relatif au dossier de configuration ou chemin absolu pour stocker les rapports.
+      example: www/energy_reports
+      default: www/energy_reports
