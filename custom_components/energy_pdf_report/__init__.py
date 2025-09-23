@@ -19,6 +19,8 @@ from homeassistant.components.recorder.statistics import StatisticsRow
 from homeassistant.const import CONF_FILENAME
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.config_entries import ConfigEntry
+
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
@@ -57,6 +59,9 @@ SERVICE_GENERATE_SCHEMA = vol.Schema(
 )
 
 
+DATA_SERVICES_REGISTERED = "services_registered"
+DATA_CONFIG_ENTRY_IDS = "entry_ids"
+
 @dataclass(slots=True)
 class MetricDefinition:
     """Représentation d'une statistique à inclure dans le rapport."""
@@ -66,6 +71,56 @@ class MetricDefinition:
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Initialiser les structures de données du domaine."""
+
+    hass.data.setdefault(DOMAIN, {})
+    domain_data = hass.data[DOMAIN]
+    domain_data.setdefault(DATA_CONFIG_ENTRY_IDS, set())
+
+    if DOMAIN in config:
+        _async_register_services(hass)
+
+    return True
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Configurer une entrée de configuration."""
+
+    domain_data = hass.data.setdefault(DOMAIN, {})
+    entry_ids: set[str] = domain_data.setdefault(DATA_CONFIG_ENTRY_IDS, set())
+    entry_ids.add(entry.entry_id)
+
+    _async_register_services(hass)
+
+    return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Décharger l'intégration lors de la suppression de l'entrée."""
+
+    domain_data = hass.data.get(DOMAIN)
+    if not domain_data:
+        return True
+
+    entry_ids: set[str] = domain_data.setdefault(DATA_CONFIG_ENTRY_IDS, set())
+    entry_ids.discard(entry.entry_id)
+
+    if not entry_ids:
+        hass.services.async_remove(DOMAIN, SERVICE_GENERATE_REPORT)
+        domain_data.pop(DATA_SERVICES_REGISTERED, None)
+        hass.data.pop(DOMAIN, None)
+
+    return True
+
+
+def _async_register_services(hass: HomeAssistant) -> None:
+    """Enregistrer les services si nécessaire."""
+
+    domain_data = hass.data.setdefault(DOMAIN, {})
+    if domain_data.get(DATA_SERVICES_REGISTERED):
+        return
+
+    domain_data[DATA_SERVICES_REGISTERED] = True
     """Configurer le service de génération de rapport."""
 
     async def _async_generate(call: ServiceCall) -> None:
@@ -77,8 +132,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         _async_generate,
         schema=SERVICE_GENERATE_SCHEMA,
     )
-
-    return True
 
 
 async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None:
@@ -441,4 +494,5 @@ def _format_number(value: float) -> str:
     return formatted.replace(",", " ")
 
 
-__all__ = ["async_setup"]
+__all__ = ["async_setup", "async_setup_entry", "async_unload_entry"]
+

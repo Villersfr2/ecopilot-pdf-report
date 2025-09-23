@@ -5,7 +5,9 @@ Ce composant personnalisé Home Assistant ajoute un service `energy_pdf_report.g
 ## Installation rapide
 1. Copier le dossier `energy_pdf_report` dans le répertoire `custom_components` de votre installation Home Assistant.
 2. Redémarrer Home Assistant.
-3. Appeler le service `energy_pdf_report.generate` depuis l'interface ou via une automatisation.
+3. Depuis **Paramètres → Appareils et services → Ajouter une intégration**, sélectionner **Energy PDF Report** pour créer l'entrée de configuration.
+4. Le service `energy_pdf_report.generate` devient alors disponible dans l'outil Développeur > Services et peut être utilisé dans vos automatisations.
+
 
 ## Paramètres du service
 - `start_date` *(optionnel)* : date locale de début (format `YYYY-MM-DD`). Par défaut la période courante (jour, semaine ou mois) est utilisée.
