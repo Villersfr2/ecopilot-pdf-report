@@ -20,6 +20,7 @@ from homeassistant.const import CONF_FILENAME
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.config_entries import ConfigEntry
+
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
@@ -60,7 +61,6 @@ SERVICE_GENERATE_SCHEMA = vol.Schema(
 
 DATA_SERVICES_REGISTERED = "services_registered"
 DATA_CONFIG_ENTRY_IDS = "entry_ids"
-
 
 @dataclass(slots=True)
 class MetricDefinition:
@@ -121,6 +121,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
         return
 
     domain_data[DATA_SERVICES_REGISTERED] = True
+    """Configurer le service de génération de rapport."""
 
     async def _async_generate(call: ServiceCall) -> None:
         await _async_handle_generate(hass, call)
@@ -494,3 +495,4 @@ def _format_number(value: float) -> str:
 
 
 __all__ = ["async_setup", "async_setup_entry", "async_unload_entry"]
+

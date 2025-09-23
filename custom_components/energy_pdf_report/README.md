@@ -8,6 +8,7 @@ Ce composant personnalisé Home Assistant ajoute un service `energy_pdf_report.g
 3. Depuis **Paramètres → Appareils et services → Ajouter une intégration**, sélectionner **Energy PDF Report** pour créer l'entrée de configuration.
 4. Le service `energy_pdf_report.generate` devient alors disponible dans l'outil Développeur > Services et peut être utilisé dans vos automatisations.
 
+
 ## Paramètres du service
 - `start_date` *(optionnel)* : date locale de début (format `YYYY-MM-DD`). Par défaut la période courante (jour, semaine ou mois) est utilisée.
 - `end_date` *(optionnel)* : date locale de fin (format `YYYY-MM-DD`). Si omis, la fin est déduite de la granularité.
