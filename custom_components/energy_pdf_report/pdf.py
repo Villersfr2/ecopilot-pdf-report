@@ -1,0 +1,109 @@
+"""Génération de rapports PDF pour l'intégration energy_pdf_report."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Iterable, Sequence
+
+from fpdf import FPDF
+
+
+@dataclass(slots=True)
+class TableConfig:
+    """Configuration d'un tableau à insérer dans le PDF."""
+
+    title: str
+    headers: Sequence[str]
+    rows: Iterable[Sequence[str]]
+    column_widths: Sequence[float] | None = None
+
+
+class EnergyPDFBuilder:
+    """Constructeur simplifié de rapports PDF."""
+
+    def __init__(self, title: str) -> None:
+        """Initialiser le générateur de PDF."""
+        self._pdf = FPDF()
+        self._pdf.set_auto_page_break(auto=True, margin=15)
+        self._pdf.add_page()
+        self._pdf.set_title(title)
+        self._pdf.set_creator("Home Assistant")
+        self._pdf.set_author("energy_pdf_report")
+        self._pdf.set_font("Helvetica", "B", 16)
+        self._pdf.cell(0, 10, title, ln=True)
+        self._pdf.ln(2)
+
+    @property
+    def _available_width(self) -> float:
+        """Retourner la largeur disponible pour le contenu."""
+        return self._pdf.w - self._pdf.l_margin - self._pdf.r_margin
+
+    def add_paragraph(self, text: str, bold: bool = False, size: int = 11) -> None:
+        """Ajouter un paragraphe simple."""
+        font_style = "B" if bold else ""
+        self._pdf.set_font("Helvetica", font_style, size)
+        self._ensure_space(6)
+        self._pdf.multi_cell(0, 6, text)
+        self._pdf.ln(1)
+
+    def add_table(self, config: TableConfig) -> None:
+        """Ajouter un tableau structuré."""
+        headers = list(config.headers)
+        rows = list(config.rows)
+        if not headers:
+            return
+
+        if config.column_widths is not None:
+            column_widths = list(config.column_widths)
+        else:
+            column_widths = [self._available_width / len(headers)] * len(headers)
+
+        header_height = 7
+        row_height = 6
+
+        self._pdf.set_font("Helvetica", "B", 12)
+        self._ensure_space(header_height + 4)
+        self._pdf.cell(0, 8, config.title, ln=True)
+
+        self._pdf.set_font("Helvetica", "B", 10)
+        self._draw_row(headers, column_widths, header_height)
+
+        self._pdf.set_font("Helvetica", "", 10)
+        if not rows:
+            empty_row = ["Aucune donnée disponible"] + [""] * (len(headers) - 1)
+            self._draw_row(empty_row, column_widths, row_height)
+            return
+
+        for row in rows:
+            str_row = ["" if value is None else str(value) for value in row]
+            self._draw_row(str_row, column_widths, row_height)
+
+        self._pdf.ln(1)
+
+    def add_footer(self, text: str) -> None:
+        """Ajouter un texte de bas de page léger."""
+        self._pdf.set_font("Helvetica", "", 9)
+        self._ensure_space(5)
+        self._pdf.multi_cell(0, 5, text)
+
+    def output(self, path: str) -> None:
+        """Sauvegarder le PDF."""
+        self._pdf.output(path)
+
+    def _draw_row(
+        self, row: Sequence[str], column_widths: Sequence[float], height: float
+    ) -> None:
+        """Dessiner une ligne du tableau."""
+        self._ensure_space(height)
+        for index, (value, width) in enumerate(zip(row, column_widths)):
+            align = "R" if index == len(row) - 1 else "L"
+            self._pdf.cell(width, height, value, border=1, align=align)
+        self._pdf.ln(height)
+
+    def _ensure_space(self, height: float) -> None:
+        """Ajouter une page si besoin."""
+        if self._pdf.get_y() + height > self._pdf.page_break_trigger:
+            self._pdf.add_page()
+
+
+__all__ = ["EnergyPDFBuilder", "TableConfig"]
