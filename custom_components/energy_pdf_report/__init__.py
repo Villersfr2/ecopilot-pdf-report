@@ -295,12 +295,9 @@ async def _collect_statistics(
             "Le composant recorder doit être actif pour générer le rapport."
         ) from err
 
-    get_metadata_job = partial(
-        recorder_statistics.get_metadata,
-        hass,
-        statistic_ids=statistic_ids,
-    )
-    metadata = await instance.async_add_executor_job(get_metadata_job)
+    metadata_job = partial(recorder_statistics.get_metadata, hass, statistic_ids)
+    metadata = await instance.async_add_executor_job(metadata_job)
+
 
     stats_map = await instance.async_add_executor_job(
         recorder_statistics.statistics_during_period,
