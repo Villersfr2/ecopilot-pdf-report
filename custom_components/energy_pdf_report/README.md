@@ -20,9 +20,13 @@ Le fichier généré est également signalé via une notification persistante da
 
 ## Support Unicode
 
-Le rapport PDF est généré avec la police DejaVu Sans fournie dans le dossier
-`fonts/`, ce qui garantit l'affichage correct des caractères accentués et des
-symboles internationaux directement dans le document.
+Le rapport PDF embarque la police DejaVu Sans (regular et bold) compressée dans
+le code du composant. Lors de la génération, les fichiers TTF sont extraits dans
+un répertoire temporaire, enregistrés auprès de FPDF puis immédiatement
+nettoyés. Cette approche garantit l'affichage correct des caractères accentués
+et des symboles internationaux sans nécessiter de fichiers binaires dans le
+dépôt.
+
 
 ## Script de vérification
 Pour valider rapidement que l'intégration, y compris la compatibilité avec le recorder,

@@ -2,11 +2,58 @@
 
 from __future__ import annotations
 
+import base64
+import zlib
 from dataclasses import dataclass
-from importlib import resources
+
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
 from typing import Iterable, Sequence
 
 from fpdf import FPDF
+
+from .font_data import FONT_DATA
+
+
+FONT_FAMILY = "DejaVuSans"
+_FONT_FILES: dict[str, str] = {
+    "": "DejaVuSans.ttf",
+    "B": "DejaVuSans-Bold.ttf",
+}
+
+
+def _decode_font(encoded: str) -> bytes:
+    """Décoder un flux de police compressé en bytes TTF."""
+
+    return zlib.decompress(base64.b64decode(encoded))
+
+
+class _TemporaryFontCache:
+    """Stockage temporaire des polices nécessaires à FPDF."""
+
+    def __init__(self) -> None:
+        self._tempdir = TemporaryDirectory(prefix="energy_pdf_report_fonts_")
+        self.directory = Path(self._tempdir.name)
+        self._populate()
+
+    def _populate(self) -> None:
+        for filename, encoded in FONT_DATA.items():
+            (self.directory / filename).write_bytes(_decode_font(encoded))
+
+    def cleanup(self) -> None:
+        self._tempdir.cleanup()
+
+
+def _register_unicode_fonts(pdf: FPDF, font_dir: Path) -> None:
+    """Enregistrer les polices TrueType Unicode nécessaires."""
+
+    for style, filename in _FONT_FILES.items():
+        font_key = f"{FONT_FAMILY.lower()}{style}"
+        if font_key in pdf.fonts:
+            continue
+
+        pdf.add_font(FONT_FAMILY, style, str(font_dir / filename), uni=True)
 
 
 FONT_FAMILY = "DejaVuSans"
@@ -44,10 +91,13 @@ class EnergyPDFBuilder:
 
     def __init__(self, title: str) -> None:
         """Initialiser le générateur de PDF."""
+        self._font_cache = _TemporaryFontCache()
         self._pdf = FPDF()
         self._pdf.set_auto_page_break(auto=True, margin=15)
         self._pdf.add_page()
-        _register_unicode_fonts(self._pdf)
+
+        _register_unicode_fonts(self._pdf, self._font_cache.directory)
+
         self._pdf.set_title(title)
         self._pdf.set_creator("Home Assistant")
         self._pdf.set_author("energy_pdf_report")
@@ -110,7 +160,21 @@ class EnergyPDFBuilder:
 
     def output(self, path: str) -> None:
         """Sauvegarder le PDF."""
-        self._pdf.output(path)
+        try:
+            self._pdf.output(path)
+        finally:
+            self._cleanup_fonts()
+
+    def _cleanup_fonts(self) -> None:
+        """Nettoyer le répertoire temporaire de polices."""
+
+        cache = getattr(self, "_font_cache", None)
+        if cache is not None:
+            cache.cleanup()
+            self._font_cache = None
+
+    def __del__(self) -> None:  # pragma: no cover - best effort cleanup
+        self._cleanup_fonts()
 
     def _draw_row(
         self, row: Sequence[str], column_widths: Sequence[float], height: float
