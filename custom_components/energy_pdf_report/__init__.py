@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import calendar
+import inspect
+import logging
 from collections import defaultdict
 from dataclasses import dataclass
-from functools import partial
-from datetime import date, datetime, time, timedelta
-import logging
+from datetime import date, datetime, time, timedelta, tzinfo
 from pathlib import Path
 from typing import Any, Iterable, TYPE_CHECKING
 
@@ -42,6 +42,8 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+_RECORDER_METADATA_REQUIRES_HASS: bool | None = None
+
 CONF_START_DATE = "start_date"
 CONF_END_DATE = "end_date"
 CONF_PERIOD = "period"
@@ -69,6 +71,29 @@ class MetricDefinition:
 
     category: str
     statistic_id: str
+
+
+def _recorder_metadata_requires_hass() -> bool:
+    """Déterminer si recorder.get_metadata attend l'instance hass."""
+
+    global _RECORDER_METADATA_REQUIRES_HASS
+
+    if _RECORDER_METADATA_REQUIRES_HASS is None:
+        try:
+            parameters = inspect.signature(recorder_statistics.get_metadata).parameters
+        except (TypeError, ValueError):
+            _RECORDER_METADATA_REQUIRES_HASS = True
+        else:
+            _RECORDER_METADATA_REQUIRES_HASS = "hass" in parameters
+
+    return _RECORDER_METADATA_REQUIRES_HASS
+
+
+def _set_recorder_metadata_requires_hass(value: bool) -> None:
+    """Mettre à jour le cache local de compatibilité recorder."""
+
+    global _RECORDER_METADATA_REQUIRES_HASS
+    _RECORDER_METADATA_REQUIRES_HASS = value
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -144,7 +169,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
             "Le tableau de bord énergie n'est pas encore configuré."
         )
 
-    start, end, display_start, display_end, bucket = _resolve_period(call.data)
+    start, end, display_start, display_end, bucket = _resolve_period(hass, call.data)
     metrics = _build_metrics(manager.data)
 
     if not metrics:
@@ -190,12 +215,14 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     _LOGGER.info("Rapport énergie généré: %s", pdf_path)
 
 
-def _resolve_period(call_data: dict[str, Any]) -> tuple[datetime, datetime, datetime, datetime, str]:
+def _resolve_period(
+    hass: HomeAssistant, call_data: dict[str, Any]
+) -> tuple[datetime, datetime, datetime, datetime, str]:
     """Calculer les dates de début et fin en tenant compte de la granularité."""
 
     period: str = call_data.get(CONF_PERIOD, DEFAULT_PERIOD)
-    start_date: date | None = call_data.get(CONF_START_DATE)
-    end_date: date | None = call_data.get(CONF_END_DATE)
+    start_date = _coerce_service_date(call_data.get(CONF_START_DATE), CONF_START_DATE)
+    end_date = _coerce_service_date(call_data.get(CONF_END_DATE), CONF_END_DATE)
 
     now_local = dt_util.now()
 
@@ -223,17 +250,60 @@ def _resolve_period(call_data: dict[str, Any]) -> tuple[datetime, datetime, date
     if end_date < start_date:
         raise HomeAssistantError("La date de fin doit être postérieure à la date de début.")
 
-    start_local = datetime.combine(start_date, time.min, tzinfo=dt_util.DEFAULT_TIME_ZONE)
+    timezone = _select_timezone(hass)
+
+    start_local = _localize_date(start_date, timezone)
     # on travaille avec une fin exclusive (lendemain à 00:00)
-    end_local_exclusive = datetime.combine(
-        end_date + timedelta(days=1), time.min, tzinfo=dt_util.DEFAULT_TIME_ZONE
-    )
+    end_local_exclusive = _localize_date(end_date + timedelta(days=1), timezone)
 
     start_utc = dt_util.as_utc(start_local)
     end_utc = dt_util.as_utc(end_local_exclusive)
     display_end = end_local_exclusive - timedelta(seconds=1)
 
     return start_utc, end_utc, start_local, display_end, period
+
+
+def _coerce_service_date(value: Any, field: str) -> date | None:
+    """Convertir une valeur issue du service en date."""
+
+    if value is None:
+        return None
+
+    if isinstance(value, datetime):
+        return value.date()
+
+    if isinstance(value, date):
+        return value
+
+    if isinstance(value, str):
+        parsed = dt_util.parse_date(value)
+        if parsed is not None:
+            return parsed
+
+    raise HomeAssistantError(
+        f"Impossible d'interpréter {field} comme une date valide (format attendu YYYY-MM-DD)."
+    )
+
+
+def _select_timezone(hass: HomeAssistant) -> tzinfo:
+    """Déterminer le fuseau horaire à utiliser pour les conversions locales."""
+
+    if hass.config.time_zone:
+        timezone = dt_util.get_time_zone(hass.config.time_zone)
+        if timezone is not None:
+            return timezone
+
+    return dt_util.DEFAULT_TIME_ZONE
+
+
+def _localize_date(day: date, timezone: tzinfo) -> datetime:
+    """Assembler une date locale en tenant compte des transitions horaires."""
+
+    naive = datetime.combine(day, time.min)
+    localize = getattr(timezone, "localize", None)
+    if callable(localize):  # pytz support
+        return localize(naive)
+    return naive.replace(tzinfo=timezone)
 
 
 def _build_metrics(preferences: "EnergyPreferences" | dict[str, Any]) -> list[MetricDefinition]:
@@ -295,13 +365,50 @@ async def _collect_statistics(
             "Le composant recorder doit être actif pour générer le rapport."
         ) from err
 
-    metadata = await instance.async_add_executor_job(
-        partial(
-            recorder_statistics.get_metadata,
-            hass,
-            statistic_ids=statistic_ids,
-        )
-    )
+    metadata_requires_hass = _recorder_metadata_requires_hass()
+    metadata: dict[str, tuple[int, StatisticMetaData]]
+
+    try:
+        if metadata_requires_hass:
+            metadata = await instance.async_add_executor_job(
+                _get_recorder_metadata_with_hass,
+                hass,
+                statistic_ids,
+            )
+        else:
+            metadata = await instance.async_add_executor_job(
+                recorder_statistics.get_metadata,
+                statistic_ids,
+            )
+    except TypeError as err:
+        err_message = str(err)
+
+        if metadata_requires_hass and _metadata_error_indicates_legacy_signature(err_message):
+            _LOGGER.debug(
+                "Recorder get_metadata ne supporte pas hass en argument, bascule sur la signature héritée: %s",
+                err_message,
+            )
+            _set_recorder_metadata_requires_hass(False)
+            metadata = await instance.async_add_executor_job(
+                recorder_statistics.get_metadata,
+                statistic_ids,
+            )
+        elif (
+            not metadata_requires_hass
+            and _metadata_error_indicates_requires_hass(err_message)
+        ):
+            _LOGGER.debug(
+                "Recorder get_metadata nécessite hass, nouvelle tentative avec la signature actuelle: %s",
+                err_message,
+            )
+            _set_recorder_metadata_requires_hass(True)
+            metadata = await instance.async_add_executor_job(
+                _get_recorder_metadata_with_hass,
+                hass,
+                statistic_ids,
+            )
+        else:
+            raise
 
     stats_map = await instance.async_add_executor_job(
         recorder_statistics.statistics_during_period,
@@ -315,6 +422,43 @@ async def _collect_statistics(
     )
 
     return stats_map, metadata
+
+
+def _get_recorder_metadata_with_hass(
+    hass: HomeAssistant,
+    statistic_ids: set[str],
+) -> dict[str, tuple[int, StatisticMetaData]]:
+    """Appeler get_metadata avec hass en argument mot-clé."""
+
+    return recorder_statistics.get_metadata(hass, statistic_ids=statistic_ids)
+
+
+def _metadata_error_indicates_legacy_signature(message: str) -> bool:
+    """Détecter les erreurs indiquant l'ancienne signature de get_metadata."""
+
+    lowered = message.lower()
+    return any(
+        hint in lowered
+        for hint in (
+            "multiple values",
+            "positional argument",
+            "unexpected keyword",
+        )
+    )
+
+
+def _metadata_error_indicates_requires_hass(message: str) -> bool:
+    """Détecter les erreurs montrant que hass est requis."""
+
+    lowered = message.lower()
+    return any(
+        hint in lowered
+        for hint in (
+            "missing 1 required positional argument",
+            "unhashable type",
+            "homeassistant",
+        )
+    )
 
 
 def _calculate_totals(
@@ -384,24 +528,31 @@ def _build_pdf(
         "Les valeurs négatives indiquent un flux exporté ou une compensation."
     )
     builder.add_paragraph(
-        f"Nombre de statistiques utilisées : {len(metrics)}"
+        (
+            "Statistiques incluses selon la configuration du tableau de bord énergie : "
+            f"{len(metrics)}"
+        )
     )
 
     summary_rows = _prepare_summary_rows(metrics, totals, metadata)
+    summary_widths = builder.compute_column_widths((0.6, 0.25, 0.15))
     builder.add_table(
         TableConfig(
             title="Synthèse par catégorie",
             headers=("Catégorie", "Total", "Unité"),
             rows=summary_rows,
+            column_widths=summary_widths,
         )
     )
 
     detail_rows = _prepare_detail_rows(metrics, totals, metadata)
+    detail_widths = builder.compute_column_widths((0.26, 0.45, 0.17, 0.12))
     builder.add_table(
         TableConfig(
             title="Détail des statistiques",
             headers=("Catégorie", "Statistique", "Total", "Unité"),
             rows=detail_rows,
+            column_widths=detail_widths,
         )
     )
 
