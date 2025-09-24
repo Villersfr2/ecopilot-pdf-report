@@ -1,4 +1,5 @@
 {
+
   "config": {
     "step": {
       "reinstall_confirm": {
@@ -11,6 +12,7 @@
       "already_configured": "Energy PDF Report est déjà configuré."
     }
   },
+
   "options": {
     "step": {
       "init": {

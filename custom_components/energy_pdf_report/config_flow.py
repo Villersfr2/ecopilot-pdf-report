@@ -60,10 +60,12 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.ConfigFlowResult:
         """Gérer une importation depuis YAML."""
 
+
         if self._async_current_entries():
             return self.async_abort(reason="already_configured")
 
         return self.async_create_entry(title="Rapport PDF Énergie", data={})
+
 
 
 class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
