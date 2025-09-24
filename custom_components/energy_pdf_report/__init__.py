@@ -538,20 +538,24 @@ def _build_pdf(
     )
 
     summary_rows = _prepare_summary_rows(metrics, totals, metadata)
+    summary_widths = builder.compute_column_widths((0.6, 0.25, 0.15))
     builder.add_table(
         TableConfig(
             title="Synthèse par catégorie",
             headers=("Catégorie", "Total", "Unité"),
             rows=summary_rows,
+            column_widths=summary_widths,
         )
     )
 
     detail_rows = _prepare_detail_rows(metrics, totals, metadata)
+    detail_widths = builder.compute_column_widths((0.26, 0.45, 0.17, 0.12))
     builder.add_table(
         TableConfig(
             title="Détail des statistiques",
             headers=("Catégorie", "Statistique", "Total", "Unité"),
             rows=detail_rows,
+            column_widths=detail_widths,
         )
     )
 

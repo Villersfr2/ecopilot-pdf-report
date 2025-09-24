@@ -111,6 +111,19 @@ class EnergyPDFBuilder:
         self._pdf.multi_cell(0, 6, text)
         self._pdf.ln(1)
 
+    def compute_column_widths(self, weights: Sequence[float]) -> list[float]:
+        """Convertir des poids relatifs en largeurs exploitables par FPDF."""
+
+        if not weights:
+            raise ValueError("Les poids de colonne ne peuvent pas être vides")
+
+        total_weight = sum(weights)
+        if total_weight <= 0:
+            raise ValueError("Les poids de colonne doivent avoir une somme positive")
+
+        available = self._available_width
+        return [(weight / total_weight) * available for weight in weights]
+
     def add_table(self, config: TableConfig) -> None:
         """Ajouter un tableau structuré."""
         headers = list(config.headers)
