@@ -18,6 +18,7 @@ Ce composant personnalisé Home Assistant ajoute un service `energy_pdf_report.g
 
 Le fichier généré est également signalé via une notification persistante dans Home Assistant.
 
+
 > ℹ️ Le nombre de statistiques indiqué dans le rapport correspond simplement aux identifiants uniques présents dans vos préférences du tableau de bord Énergie. L'intégration n'impose aucune limite : toutes les statistiques disponibles sont prises en compte.
 
 ## Support Unicode

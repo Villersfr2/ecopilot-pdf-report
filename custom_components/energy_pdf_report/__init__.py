@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import calendar
+
 import inspect
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, tzinfo
+
 from pathlib import Path
 from typing import Any, Iterable, TYPE_CHECKING
 
@@ -409,6 +411,7 @@ async def _collect_statistics(
             )
         else:
             raise
+
 
     stats_map = await instance.async_add_executor_job(
         recorder_statistics.statistics_during_period,
