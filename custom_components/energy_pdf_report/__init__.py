@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import calendar
+
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
+
 from pathlib import Path
 from typing import Any, Iterable, TYPE_CHECKING
 
@@ -294,9 +296,11 @@ async def _collect_statistics(
             "Le composant recorder doit être actif pour générer le rapport."
         ) from err
 
+
     metadata: dict[str, tuple[int, StatisticMetaData]]
     try:
         metadata = await instance.async_add_executor_job(
+
             recorder_statistics.get_metadata,
             hass,
             statistic_ids,
@@ -310,6 +314,7 @@ async def _collect_statistics(
             recorder_statistics.get_metadata,
             statistic_ids,
         )
+
 
     stats_map = await instance.async_add_executor_job(
         recorder_statistics.statistics_during_period,
