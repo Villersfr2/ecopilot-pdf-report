@@ -296,7 +296,11 @@ async def _collect_statistics(
         ) from err
 
     metadata = await instance.async_add_executor_job(
-        partial(recorder_statistics.get_metadata, hass, statistic_ids)
+        partial(
+            recorder_statistics.get_metadata,
+            hass,
+            statistic_ids=statistic_ids,
+        )
     )
 
     stats_map = await instance.async_add_executor_job(
