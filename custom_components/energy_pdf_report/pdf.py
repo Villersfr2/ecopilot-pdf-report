@@ -5,8 +5,10 @@ from __future__ import annotations
 import base64
 import zlib
 from dataclasses import dataclass
+
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
 from typing import Iterable, Sequence
 
 from fpdf import FPDF
@@ -54,6 +56,26 @@ def _register_unicode_fonts(pdf: FPDF, font_dir: Path) -> None:
         pdf.add_font(FONT_FAMILY, style, str(font_dir / filename), uni=True)
 
 
+FONT_FAMILY = "DejaVuSans"
+_FONT_FILES: dict[str, str] = {
+    "": "DejaVuSans.ttf",
+    "B": "DejaVuSans-Bold.ttf",
+}
+
+
+def _register_unicode_fonts(pdf: FPDF) -> None:
+    """Enregistrer les polices TrueType Unicode nécessaires."""
+
+    for style, filename in _FONT_FILES.items():
+        font_key = f"{FONT_FAMILY.lower()}{style}"
+        if font_key in pdf.fonts:
+            continue
+
+        font_path = resources.files(__package__).joinpath("fonts", filename)
+        with resources.as_file(font_path) as font_file:
+            pdf.add_font(FONT_FAMILY, style, str(font_file), uni=True)
+
+
 @dataclass(slots=True)
 class TableConfig:
     """Configuration d'un tableau à insérer dans le PDF."""
@@ -73,7 +95,9 @@ class EnergyPDFBuilder:
         self._pdf = FPDF()
         self._pdf.set_auto_page_break(auto=True, margin=15)
         self._pdf.add_page()
+
         _register_unicode_fonts(self._pdf, self._font_cache.directory)
+
         self._pdf.set_title(title)
         self._pdf.set_creator("Home Assistant")
         self._pdf.set_author("energy_pdf_report")
