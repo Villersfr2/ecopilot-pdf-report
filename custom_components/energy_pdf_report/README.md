@@ -17,3 +17,26 @@ Ce composant personnalisé Home Assistant ajoute un service `energy_pdf_report.g
 - `output_dir` *(optionnel)* : répertoire de sortie relatif au dossier de configuration ou chemin absolu. Par défaut `www/energy_reports`.
 
 Le fichier généré est également signalé via une notification persistante dans Home Assistant.
+
+## Support Unicode
+
+Le rapport PDF embarque la police DejaVu Sans (regular et bold) compressée dans
+le code du composant. Lors de la génération, les fichiers TTF sont extraits dans
+un répertoire temporaire, enregistrés auprès de FPDF puis immédiatement
+nettoyés. Cette approche garantit l'affichage correct des caractères accentués
+et des symboles internationaux sans nécessiter de fichiers binaires dans le
+dépôt.
+
+## Script de vérification
+Pour valider rapidement que l'intégration, y compris la compatibilité avec le recorder,
+fonctionne correctement dans votre instance Home Assistant, un exemple de script est
+fourni dans [`examples/test_energy_pdf_report_script.yaml`](examples/test_energy_pdf_report_script.yaml).
+
+1. Copiez le contenu du fichier dans votre `scripts.yaml` (ou créez un nouveau script via l'interface en mode YAML).
+2. Enregistrez et rechargez les scripts si nécessaire.
+3. Exécutez le script **Test – Energy PDF Report** depuis l'interface.
+
+Le script appelle le service `energy_pdf_report.generate`, attend la notification
+persistante `energy_pdf_report_last_report` et consigne le message du rapport dans le
+Journal. En cas d'absence de notification dans la minute, une alerte supplémentaire
+est créée pour vous inviter à consulter les logs.
