@@ -311,6 +311,7 @@ async def _collect_statistics(
 
     metadata = await instance.async_add_executor_job(metadata_job)
 
+
     stats_map = await instance.async_add_executor_job(
         recorder_statistics.statistics_during_period,
         hass,
