@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import calendar
 
+import inspect
+
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
@@ -43,6 +45,8 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+_RECORDER_METADATA_REQUIRES_HASS: bool | None = None
+
 CONF_START_DATE = "start_date"
 CONF_END_DATE = "end_date"
 CONF_PERIOD = "period"
@@ -70,6 +74,29 @@ class MetricDefinition:
 
     category: str
     statistic_id: str
+
+
+def _recorder_metadata_requires_hass() -> bool:
+    """Déterminer si recorder.get_metadata attend l'instance hass."""
+
+    global _RECORDER_METADATA_REQUIRES_HASS
+
+    if _RECORDER_METADATA_REQUIRES_HASS is None:
+        try:
+            parameters = inspect.signature(recorder_statistics.get_metadata).parameters
+        except (TypeError, ValueError):
+            _RECORDER_METADATA_REQUIRES_HASS = True
+        else:
+            _RECORDER_METADATA_REQUIRES_HASS = "hass" in parameters
+
+    return _RECORDER_METADATA_REQUIRES_HASS
+
+
+def _set_recorder_metadata_requires_hass(value: bool) -> None:
+    """Mettre à jour le cache local de compatibilité recorder."""
+
+    global _RECORDER_METADATA_REQUIRES_HASS
+    _RECORDER_METADATA_REQUIRES_HASS = value
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -296,24 +323,50 @@ async def _collect_statistics(
             "Le composant recorder doit être actif pour générer le rapport."
         ) from err
 
-
+    metadata_requires_hass = _recorder_metadata_requires_hass()
     metadata: dict[str, tuple[int, StatisticMetaData]]
-    try:
-        metadata = await instance.async_add_executor_job(
 
-            recorder_statistics.get_metadata,
-            hass,
-            statistic_ids,
-        )
+    try:
+        if metadata_requires_hass:
+            metadata = await instance.async_add_executor_job(
+                _get_recorder_metadata_with_hass,
+                hass,
+                statistic_ids,
+            )
+        else:
+            metadata = await instance.async_add_executor_job(
+                recorder_statistics.get_metadata,
+                statistic_ids,
+            )
     except TypeError as err:
         err_message = str(err)
-        if "positional argument" not in err_message or "were given" not in err_message:
-            raise
 
-        metadata = await instance.async_add_executor_job(
-            recorder_statistics.get_metadata,
-            statistic_ids,
-        )
+        if metadata_requires_hass and _metadata_error_indicates_legacy_signature(err_message):
+            _LOGGER.debug(
+                "Recorder get_metadata ne supporte pas hass en argument, bascule sur la signature héritée: %s",
+                err_message,
+            )
+            _set_recorder_metadata_requires_hass(False)
+            metadata = await instance.async_add_executor_job(
+                recorder_statistics.get_metadata,
+                statistic_ids,
+            )
+        elif (
+            not metadata_requires_hass
+            and _metadata_error_indicates_requires_hass(err_message)
+        ):
+            _LOGGER.debug(
+                "Recorder get_metadata nécessite hass, nouvelle tentative avec la signature actuelle: %s",
+                err_message,
+            )
+            _set_recorder_metadata_requires_hass(True)
+            metadata = await instance.async_add_executor_job(
+                _get_recorder_metadata_with_hass,
+                hass,
+                statistic_ids,
+            )
+        else:
+            raise
 
 
     stats_map = await instance.async_add_executor_job(
@@ -328,6 +381,43 @@ async def _collect_statistics(
     )
 
     return stats_map, metadata
+
+
+def _get_recorder_metadata_with_hass(
+    hass: HomeAssistant,
+    statistic_ids: set[str],
+) -> dict[str, tuple[int, StatisticMetaData]]:
+    """Appeler get_metadata avec hass en argument mot-clé."""
+
+    return recorder_statistics.get_metadata(hass, statistic_ids=statistic_ids)
+
+
+def _metadata_error_indicates_legacy_signature(message: str) -> bool:
+    """Détecter les erreurs indiquant l'ancienne signature de get_metadata."""
+
+    lowered = message.lower()
+    return any(
+        hint in lowered
+        for hint in (
+            "multiple values",
+            "positional argument",
+            "unexpected keyword",
+        )
+    )
+
+
+def _metadata_error_indicates_requires_hass(message: str) -> bool:
+    """Détecter les erreurs montrant que hass est requis."""
+
+    lowered = message.lower()
+    return any(
+        hint in lowered
+        for hint in (
+            "missing 1 required positional argument",
+            "unhashable type",
+            "homeassistant",
+        )
+    )
 
 
 def _calculate_totals(
