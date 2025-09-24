@@ -58,7 +58,6 @@ def _register_unicode_fonts(pdf: FPDF) -> _TemporaryFontCache | None:
 
     cache = _TemporaryFontCache()
 
-
     for style, filename in _FONT_FILES.items():
         font_key = f"{FONT_FAMILY.lower()}{style}"
         if font_key in pdf.fonts:

@@ -5,11 +5,10 @@ from __future__ import annotations
 import calendar
 
 import inspect
-
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, tzinfo
 
 from pathlib import Path
 from typing import Any, Iterable, TYPE_CHECKING
@@ -172,7 +171,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
             "Le tableau de bord énergie n'est pas encore configuré."
         )
 
-    start, end, display_start, display_end, bucket = _resolve_period(call.data)
+    start, end, display_start, display_end, bucket = _resolve_period(hass, call.data)
     metrics = _build_metrics(manager.data)
 
     if not metrics:
@@ -218,12 +217,14 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     _LOGGER.info("Rapport énergie généré: %s", pdf_path)
 
 
-def _resolve_period(call_data: dict[str, Any]) -> tuple[datetime, datetime, datetime, datetime, str]:
+def _resolve_period(
+    hass: HomeAssistant, call_data: dict[str, Any]
+) -> tuple[datetime, datetime, datetime, datetime, str]:
     """Calculer les dates de début et fin en tenant compte de la granularité."""
 
     period: str = call_data.get(CONF_PERIOD, DEFAULT_PERIOD)
-    start_date: date | None = call_data.get(CONF_START_DATE)
-    end_date: date | None = call_data.get(CONF_END_DATE)
+    start_date = _coerce_service_date(call_data.get(CONF_START_DATE), CONF_START_DATE)
+    end_date = _coerce_service_date(call_data.get(CONF_END_DATE), CONF_END_DATE)
 
     now_local = dt_util.now()
 
@@ -251,17 +252,60 @@ def _resolve_period(call_data: dict[str, Any]) -> tuple[datetime, datetime, date
     if end_date < start_date:
         raise HomeAssistantError("La date de fin doit être postérieure à la date de début.")
 
-    start_local = datetime.combine(start_date, time.min, tzinfo=dt_util.DEFAULT_TIME_ZONE)
+    timezone = _select_timezone(hass)
+
+    start_local = _localize_date(start_date, timezone)
     # on travaille avec une fin exclusive (lendemain à 00:00)
-    end_local_exclusive = datetime.combine(
-        end_date + timedelta(days=1), time.min, tzinfo=dt_util.DEFAULT_TIME_ZONE
-    )
+    end_local_exclusive = _localize_date(end_date + timedelta(days=1), timezone)
 
     start_utc = dt_util.as_utc(start_local)
     end_utc = dt_util.as_utc(end_local_exclusive)
     display_end = end_local_exclusive - timedelta(seconds=1)
 
     return start_utc, end_utc, start_local, display_end, period
+
+
+def _coerce_service_date(value: Any, field: str) -> date | None:
+    """Convertir une valeur issue du service en date."""
+
+    if value is None:
+        return None
+
+    if isinstance(value, datetime):
+        return value.date()
+
+    if isinstance(value, date):
+        return value
+
+    if isinstance(value, str):
+        parsed = dt_util.parse_date(value)
+        if parsed is not None:
+            return parsed
+
+    raise HomeAssistantError(
+        f"Impossible d'interpréter {field} comme une date valide (format attendu YYYY-MM-DD)."
+    )
+
+
+def _select_timezone(hass: HomeAssistant) -> tzinfo:
+    """Déterminer le fuseau horaire à utiliser pour les conversions locales."""
+
+    if hass.config.time_zone:
+        timezone = dt_util.get_time_zone(hass.config.time_zone)
+        if timezone is not None:
+            return timezone
+
+    return dt_util.DEFAULT_TIME_ZONE
+
+
+def _localize_date(day: date, timezone: tzinfo) -> datetime:
+    """Assembler une date locale en tenant compte des transitions horaires."""
+
+    naive = datetime.combine(day, time.min)
+    localize = getattr(timezone, "localize", None)
+    if callable(localize):  # pytz support
+        return localize(naive)
+    return naive.replace(tzinfo=timezone)
 
 
 def _build_metrics(preferences: "EnergyPreferences" | dict[str, Any]) -> list[MetricDefinition]:
@@ -487,7 +531,10 @@ def _build_pdf(
         "Les valeurs négatives indiquent un flux exporté ou une compensation."
     )
     builder.add_paragraph(
-        f"Nombre de statistiques utilisées : {len(metrics)}"
+        (
+            "Statistiques incluses selon la configuration du tableau de bord énergie : "
+            f"{len(metrics)}"
+        )
     )
 
     summary_rows = _prepare_summary_rows(metrics, totals, metadata)

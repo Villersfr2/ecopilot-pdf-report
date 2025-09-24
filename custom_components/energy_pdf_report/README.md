@@ -10,13 +10,16 @@ Ce composant personnalisé Home Assistant ajoute un service `energy_pdf_report.g
 
 
 ## Paramètres du service
-- `start_date` *(optionnel)* : date locale de début (format `YYYY-MM-DD`). Par défaut la période courante (jour, semaine ou mois) est utilisée.
-- `end_date` *(optionnel)* : date locale de fin (format `YYYY-MM-DD`). Si omis, la fin est déduite de la granularité.
+- `start_date` *(optionnel)* : date locale de début (format `YYYY-MM-DD`). Par défaut la période courante (jour, semaine ou mois) est utilisée. Les valeurs provenant d'objets `date`, `datetime` ou de chaînes de caractères sont automatiquement converties.
+- `end_date` *(optionnel)* : date locale de fin (format `YYYY-MM-DD`). Si omis, la fin est déduite de la granularité. Les objets `datetime` sont convertis en date avant le traitement.
 - `period` *(optionnel)* : granularité des statistiques (`day`, `week` ou `month`).
 - `filename` *(optionnel)* : nom du fichier PDF à générer (l'extension `.pdf` est ajoutée automatiquement si nécessaire).
 - `output_dir` *(optionnel)* : répertoire de sortie relatif au dossier de configuration ou chemin absolu. Par défaut `www/energy_reports`.
 
 Le fichier généré est également signalé via une notification persistante dans Home Assistant.
+
+
+> ℹ️ Le nombre de statistiques indiqué dans le rapport correspond simplement aux identifiants uniques présents dans vos préférences du tableau de bord Énergie. L'intégration n'impose aucune limite : toutes les statistiques disponibles sont prises en compte.
 
 ## Support Unicode
 
