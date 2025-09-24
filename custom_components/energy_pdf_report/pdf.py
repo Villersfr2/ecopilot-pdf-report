@@ -2,10 +2,66 @@
 
 from __future__ import annotations
 
+import base64
+import zlib
 from dataclasses import dataclass
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Iterable, Sequence
 
 from fpdf import FPDF
+
+from .font_data import FONT_DATA
+
+
+FONT_FAMILY = "DejaVuSans"
+_FONT_FILES: dict[str, str] = {
+    "": "DejaVuSans.ttf",
+    "B": "DejaVuSans-Bold.ttf",
+}
+
+
+def _decode_font(encoded: str) -> bytes:
+    """Décoder un flux de police compressé en bytes TTF."""
+
+    return zlib.decompress(base64.b64decode(encoded))
+
+
+class _TemporaryFontCache:
+    """Stockage temporaire des polices nécessaires à FPDF."""
+
+    def __init__(self) -> None:
+        self._tempdir = TemporaryDirectory(prefix="energy_pdf_report_fonts_")
+        self.directory = Path(self._tempdir.name)
+        self._populate()
+
+    def _populate(self) -> None:
+        for filename, encoded in FONT_DATA.items():
+            (self.directory / filename).write_bytes(_decode_font(encoded))
+
+    def cleanup(self) -> None:
+        self._tempdir.cleanup()
+
+
+def _register_unicode_fonts(pdf: FPDF) -> _TemporaryFontCache | None:
+    """Enregistrer les polices Unicode sur le PDF et retourner le cache."""
+
+    missing_styles = [
+        style for style in _FONT_FILES if f"{FONT_FAMILY.lower()}{style}" not in pdf.fonts
+    ]
+
+    if not missing_styles:
+        return None
+
+    cache = _TemporaryFontCache()
+
+    for style, filename in _FONT_FILES.items():
+        font_key = f"{FONT_FAMILY.lower()}{style}"
+        if font_key in pdf.fonts:
+            continue
+        pdf.add_font(FONT_FAMILY, style, str(cache.directory / filename), uni=True)
+
+    return cache
 
 
 @dataclass(slots=True)
@@ -26,10 +82,11 @@ class EnergyPDFBuilder:
         self._pdf = FPDF()
         self._pdf.set_auto_page_break(auto=True, margin=15)
         self._pdf.add_page()
+        self._font_cache = _register_unicode_fonts(self._pdf)
         self._pdf.set_title(title)
         self._pdf.set_creator("Home Assistant")
         self._pdf.set_author("energy_pdf_report")
-        self._pdf.set_font("Helvetica", "B", 16)
+        self._pdf.set_font(FONT_FAMILY, "B", 16)
         self._pdf.cell(0, 10, title, ln=True)
         self._pdf.ln(2)
 
@@ -41,7 +98,7 @@ class EnergyPDFBuilder:
     def add_paragraph(self, text: str, bold: bool = False, size: int = 11) -> None:
         """Ajouter un paragraphe simple."""
         font_style = "B" if bold else ""
-        self._pdf.set_font("Helvetica", font_style, size)
+        self._pdf.set_font(FONT_FAMILY, font_style, size)
         self._ensure_space(6)
         self._pdf.multi_cell(0, 6, text)
         self._pdf.ln(1)
@@ -61,14 +118,14 @@ class EnergyPDFBuilder:
         header_height = 7
         row_height = 6
 
-        self._pdf.set_font("Helvetica", "B", 12)
+        self._pdf.set_font(FONT_FAMILY, "B", 12)
         self._ensure_space(header_height + 4)
         self._pdf.cell(0, 8, config.title, ln=True)
 
-        self._pdf.set_font("Helvetica", "B", 10)
+        self._pdf.set_font(FONT_FAMILY, "B", 10)
         self._draw_row(headers, column_widths, header_height)
 
-        self._pdf.set_font("Helvetica", "", 10)
+        self._pdf.set_font(FONT_FAMILY, "", 10)
         if not rows:
             empty_row = ["Aucune donnée disponible"] + [""] * (len(headers) - 1)
             self._draw_row(empty_row, column_widths, row_height)
@@ -82,13 +139,27 @@ class EnergyPDFBuilder:
 
     def add_footer(self, text: str) -> None:
         """Ajouter un texte de bas de page léger."""
-        self._pdf.set_font("Helvetica", "", 9)
+        self._pdf.set_font(FONT_FAMILY, "", 9)
         self._ensure_space(5)
         self._pdf.multi_cell(0, 5, text)
 
     def output(self, path: str) -> None:
         """Sauvegarder le PDF."""
-        self._pdf.output(path)
+        try:
+            self._pdf.output(path)
+        finally:
+            self._cleanup_fonts()
+
+    def _cleanup_fonts(self) -> None:
+        """Nettoyer le répertoire temporaire de polices."""
+
+        cache = getattr(self, "_font_cache", None)
+        if cache is not None:
+            cache.cleanup()
+            self._font_cache = None
+
+    def __del__(self) -> None:  # pragma: no cover - best effort cleanup
+        self._cleanup_fonts()
 
     def _draw_row(
         self, row: Sequence[str], column_widths: Sequence[float], height: float
