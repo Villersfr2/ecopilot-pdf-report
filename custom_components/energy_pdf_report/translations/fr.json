@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "reinstall_confirm": {
+        "title": "Remplacer la configuration existante",
+        "description": "Une configuration Energy PDF Report (« {title} ») est déjà présente. Validez pour la supprimer et la réinstaller."
+      }
+    },
+    "abort": {
+      "remove_failed": "La suppression de l'ancienne configuration a échoué. Réessayez depuis Paramètres > Appareils et services.",
+      "already_configured": "Energy PDF Report est déjà configuré."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "description": "Aucune option supplémentaire n'est disponible."
+      }
+    }
+  }
+}
