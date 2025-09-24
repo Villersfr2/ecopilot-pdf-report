@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import calendar
-import inspect
+
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
-from functools import partial
+
 from pathlib import Path
 from typing import Any, Iterable, TYPE_CHECKING
 
@@ -296,20 +296,24 @@ async def _collect_statistics(
             "Le composant recorder doit être actif pour générer le rapport."
         ) from err
 
-    metadata_job = partial(
-        recorder_statistics.get_metadata,
-        statistic_ids=statistic_ids,
-    )
 
-    metadata_signature = inspect.signature(recorder_statistics.get_metadata)
-    if metadata_signature.parameters.get("hass") is not None:
-        metadata_job = partial(
+    metadata: dict[str, tuple[int, StatisticMetaData]]
+    try:
+        metadata = await instance.async_add_executor_job(
+
             recorder_statistics.get_metadata,
             hass,
-            statistic_ids=statistic_ids,
+            statistic_ids,
         )
+    except TypeError as err:
+        err_message = str(err)
+        if "positional argument" not in err_message or "were given" not in err_message:
+            raise
 
-    metadata = await instance.async_add_executor_job(metadata_job)
+        metadata = await instance.async_add_executor_job(
+            recorder_statistics.get_metadata,
+            statistic_ids,
+        )
 
 
     stats_map = await instance.async_add_executor_job(
