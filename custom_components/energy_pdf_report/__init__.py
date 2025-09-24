@@ -50,6 +50,7 @@ CONF_START_DATE = "start_date"
 CONF_END_DATE = "end_date"
 CONF_PERIOD = "period"
 CONF_OUTPUT_DIR = "output_dir"
+CONF_DASHBOARD = "dashboard"
 
 VALID_PERIODS: tuple[str, ...] = ("day", "week", "month")
 
@@ -60,6 +61,7 @@ SERVICE_GENERATE_SCHEMA = vol.Schema(
         vol.Optional(CONF_PERIOD, default=DEFAULT_PERIOD): vol.In(VALID_PERIODS),
         vol.Optional(CONF_FILENAME): cv.string,
         vol.Optional(CONF_OUTPUT_DIR, default=DEFAULT_OUTPUT_DIR): cv.string,
+        vol.Optional(CONF_DASHBOARD): cv.string,
     }
 )
 
@@ -73,6 +75,16 @@ class MetricDefinition:
 
     category: str
     statistic_id: str
+
+
+
+@dataclass(slots=True)
+class DashboardSelection:
+    """Informations sur un tableau de bord énergie sélectionné."""
+
+    identifier: str | None
+    name: str | None
+    preferences: dict[str, Any]
 
 
 def _recorder_metadata_requires_hass() -> bool:
@@ -166,13 +178,17 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     """Exécuter la génération d'un rapport PDF."""
 
     manager = await async_get_manager(hass)
-    if not manager.data:
-        raise HomeAssistantError(
-            "Le tableau de bord énergie n'est pas encore configuré."
-        )
+
+
+    dashboard_requested: str | None = call.data.get(CONF_DASHBOARD)
+    selection = await _async_select_dashboard_preferences(
+        hass, manager, dashboard_requested
+    )
+    preferences = selection.preferences
 
     start, end, display_start, display_end, bucket = _resolve_period(hass, call.data)
-    metrics = _build_metrics(manager.data)
+    metrics = _build_metrics(preferences)
+
 
     if not metrics:
         raise HomeAssistantError(
@@ -190,6 +206,8 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     filename: str | None = call.data.get(CONF_FILENAME)
     generated_at = dt_util.now()
 
+    dashboard_label = _format_dashboard_label(selection)
+
     pdf_path = await hass.async_add_executor_job(
         _build_pdf,
         metrics,
@@ -201,20 +219,353 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
         output_dir,
         filename,
         generated_at,
+        dashboard_label,
     )
 
-    message = (
-        "Rapport énergie généré pour la période du "
-        f"{display_start.date().isoformat()} au {display_end.date().isoformat()}.\n"
-        f"Fichier : {pdf_path}"
-    )
+    message_lines = [
+        (
+            "Rapport énergie généré pour la période du "
+            f"{display_start.date().isoformat()} au {display_end.date().isoformat()}."
+        )
+    ]
+
+    if dashboard_label:
+        message_lines.append(f"Tableau de bord : {dashboard_label}")
+
+    message_lines.append(f"Fichier : {pdf_path}")
+    message = "\n".join(message_lines)
     persistent_notification.async_create(
         hass,
         message,
         title="Rapport énergie",
         notification_id=f"{DOMAIN}_last_report",
     )
-    _LOGGER.info("Rapport énergie généré: %s", pdf_path)
+    if dashboard_label:
+        _LOGGER.info("Rapport énergie généré (%s): %s", dashboard_label, pdf_path)
+    else:
+        _LOGGER.info("Rapport énergie généré: %s", pdf_path)
+
+
+async def _async_select_dashboard_preferences(
+    hass: HomeAssistant, manager: Any, requested_dashboard: str | None
+) -> DashboardSelection:
+    """Sélectionner les préférences énergie pour le tableau demandé."""
+
+    dashboards = _collect_dashboard_preferences(manager)
+
+    if requested_dashboard:
+        normalized = _normalize_dashboard_key(requested_dashboard)
+
+        if normalized is not None:
+            for selection in dashboards:
+                if _match_dashboard_key(selection, normalized):
+                    return selection
+
+        fetched = await _async_fetch_dashboard_preferences_via_methods(
+            hass, manager, requested_dashboard
+        )
+        if fetched:
+            return fetched
+
+        raise HomeAssistantError(
+            f"Aucun tableau de bord énergie nommé '{requested_dashboard}' n'a été trouvé."
+        )
+
+    if dashboards:
+        return _pick_default_dashboard(manager, dashboards)
+
+    data = getattr(manager, "data", None)
+    if _is_energy_preferences(data):
+        return DashboardSelection(None, None, data)
+
+    raise HomeAssistantError(
+        "Le tableau de bord énergie n'est pas encore configuré."
+    )
+
+
+def _collect_dashboard_preferences(manager: Any) -> list[DashboardSelection]:
+    """Extraire les différents tableaux de bord disponibles."""
+
+    selections: list[DashboardSelection] = []
+
+    selections.extend(_extract_named_preferences(getattr(manager, "data", None)))
+
+    for attr in ("dashboards", "dashboard"):
+        if hasattr(manager, attr):
+            selections.extend(_extract_named_preferences(getattr(manager, attr)))
+
+    data = getattr(manager, "data", None)
+    if isinstance(data, dict):
+        for key in ("dashboards", "dashboard"):
+            if key in data:
+                selections.extend(_extract_named_preferences(data[key]))
+
+    deduped: list[DashboardSelection] = []
+    for selection in selections:
+        if not _is_energy_preferences(selection.preferences):
+            continue
+
+        key = (selection.identifier, selection.name)
+        existing_index = next(
+            (index for index, current in enumerate(deduped) if (current.identifier, current.name) == key),
+            None,
+        )
+
+        if existing_index is None:
+            deduped.append(selection)
+            continue
+
+        current = deduped[existing_index]
+        replace = False
+        if current.identifier is None and selection.identifier is not None:
+            replace = True
+        elif current.name is None and selection.name is not None:
+            replace = True
+
+        if replace:
+            deduped[existing_index] = selection
+
+    return deduped
+
+
+def _extract_named_preferences(
+    candidate: Any, fallback_id: str | None = None, fallback_name: str | None = None
+) -> list[DashboardSelection]:
+    """Parcourir récursivement une structure pour trouver des préférences énergie."""
+
+    selections: list[DashboardSelection] = []
+
+    def _add(preferences: Any, identifier: str | None, name: str | None) -> None:
+        if _is_energy_preferences(preferences):
+            selections.append(
+                DashboardSelection(
+                    identifier if identifier else fallback_id,
+                    name if name else fallback_name,
+                    preferences,
+                )
+            )
+
+    if candidate is None:
+        return selections
+
+    if _is_energy_preferences(candidate):
+        _add(candidate, fallback_id, fallback_name)
+        return selections
+
+    if isinstance(candidate, dict):
+        current_id = fallback_id
+        for key in ("dashboard_id", "id", "slug", "key"):
+            if key in candidate and candidate[key] is not None:
+                value = candidate[key]
+                current_id = str(value)
+                break
+
+        current_name = fallback_name
+        for key in ("name", "title", "label"):
+            value = candidate.get(key)
+            if isinstance(value, str) and value.strip():
+                current_name = value
+                break
+
+        if "preferences" in candidate:
+            selections.extend(
+                _extract_named_preferences(candidate["preferences"], current_id, current_name)
+            )
+        if "dashboards" in candidate:
+            selections.extend(
+                _extract_named_preferences(candidate["dashboards"], current_id, current_name)
+            )
+        if "dashboard" in candidate:
+            selections.extend(
+                _extract_named_preferences(candidate["dashboard"], current_id, current_name)
+            )
+
+        for key, value in candidate.items():
+            if key in {"preferences", "dashboards", "dashboard", "energy_sources", "device_consumption"}:
+                continue
+            if isinstance(value, (dict, list)):
+                next_id = current_id
+                if isinstance(key, str) and key not in {"name", "title", "label"}:
+                    next_id = key
+                selections.extend(_extract_named_preferences(value, next_id, current_name))
+
+        return selections
+
+    if isinstance(candidate, list):
+        for item in candidate:
+            selections.extend(_extract_named_preferences(item, fallback_id, fallback_name))
+        return selections
+
+    for attr in ("preferences", "data"):
+        if hasattr(candidate, attr):
+            sub_candidate = getattr(candidate, attr)
+            current_id = fallback_id
+            for attr_key in ("dashboard_id", "id", "slug", "key"):
+                if hasattr(candidate, attr_key):
+                    value = getattr(candidate, attr_key)
+                    if value is not None:
+                        current_id = str(value)
+                        break
+
+            current_name = fallback_name
+            for attr_name in ("name", "title", "label"):
+                if hasattr(candidate, attr_name):
+                    value = getattr(candidate, attr_name)
+                    if isinstance(value, str) and value.strip():
+                        current_name = value
+                        break
+
+            selections.extend(
+                _extract_named_preferences(sub_candidate, current_id, current_name)
+            )
+            break
+
+    return selections
+
+
+def _is_energy_preferences(candidate: Any) -> bool:
+    """Vérifier qu'une structure correspond aux préférences énergie attendues."""
+
+    return (
+        isinstance(candidate, dict)
+        and "energy_sources" in candidate
+        and "device_consumption" in candidate
+    )
+
+
+def _normalize_dashboard_key(value: str | None) -> str | None:
+    """Normaliser un identifiant de tableau de bord pour comparaison."""
+
+    if value is None:
+        return None
+
+    normalized = str(value).strip()
+    if not normalized:
+        return None
+
+    return normalized.casefold()
+
+
+def _match_dashboard_key(selection: DashboardSelection, requested: str) -> bool:
+    """Comparer un tableau de bord à une clé normalisée."""
+
+    for candidate in (selection.identifier, selection.name):
+        normalized = _normalize_dashboard_key(candidate)
+        if normalized and normalized == requested:
+            return True
+
+    return False
+
+
+def _pick_default_dashboard(
+    manager: Any, dashboards: list[DashboardSelection]
+) -> DashboardSelection:
+    """Choisir un tableau par défaut parmi ceux disponibles."""
+
+    def _find_match(value: Any) -> DashboardSelection | None:
+        normalized = _normalize_dashboard_key(value if value is None else str(value))
+        if not normalized:
+            return None
+        for item in dashboards:
+            if _match_dashboard_key(item, normalized):
+                return item
+        return None
+
+    data = getattr(manager, "data", None)
+    if isinstance(data, dict):
+        for key in ("selected_dashboard", "default_dashboard", "active_dashboard"):
+            selection = _find_match(data.get(key))
+            if selection:
+                return selection
+
+    for attr in ("selected_dashboard", "default_dashboard", "active_dashboard"):
+        if hasattr(manager, attr):
+            selection = _find_match(getattr(manager, attr))
+            if selection:
+                return selection
+
+    return dashboards[0]
+
+
+async def _async_fetch_dashboard_preferences_via_methods(
+    hass: HomeAssistant, manager: Any, dashboard_id: str
+) -> DashboardSelection | None:
+    """Tenter de récupérer les préférences via les méthodes du gestionnaire."""
+
+    method_names = (
+        "async_get_dashboard",
+        "async_get_dashboard_preferences",
+        "async_get_dashboard_by_id",
+        "async_get_dashboard_by_slug",
+        "get_dashboard",
+    )
+
+    for name in method_names:
+        method = getattr(manager, name, None)
+        if not callable(method):
+            continue
+
+        for args in ((dashboard_id,), (hass, dashboard_id)):
+            try:
+                result = method(*args)
+            except TypeError:
+                continue
+            except Exception as err:  # pragma: no cover - best effort logging
+                _LOGGER.debug(
+                    "Erreur lors de l'appel de %s pour récupérer le tableau '%s': %s",
+                    name,
+                    dashboard_id,
+                    err,
+                )
+                continue
+
+            result = await _await_if_needed(result)
+
+            selections = _extract_named_preferences(result, dashboard_id)
+            if selections:
+                requested = _normalize_dashboard_key(dashboard_id)
+                if requested:
+                    for selection in selections:
+                        if _match_dashboard_key(selection, requested):
+                            if selection.identifier is None:
+                                return DashboardSelection(
+                                    dashboard_id, selection.name, selection.preferences
+                                )
+                            return selection
+
+                primary = selections[0]
+                if primary.identifier is None:
+                    return DashboardSelection(dashboard_id, primary.name, primary.preferences)
+                return primary
+
+            if _is_energy_preferences(result):
+                return DashboardSelection(dashboard_id, None, result)
+
+
+    return None
+
+
+async def _await_if_needed(result: Any) -> Any:
+    """Attendre une valeur si elle est awaitable."""
+
+    if inspect.isawaitable(result):
+        return await result
+    return result
+
+
+def _format_dashboard_label(selection: DashboardSelection) -> str | None:
+    """Créer une étiquette lisible pour le tableau sélectionné."""
+
+    name = selection.name
+    identifier = selection.identifier
+
+    if name and identifier:
+        if _normalize_dashboard_key(name) == _normalize_dashboard_key(identifier):
+            return name
+        return f"{name} ({identifier})"
+
+    return name or identifier
+
 
 
 def _resolve_period(
@@ -496,6 +847,7 @@ def _build_pdf(
     output_dir: Path,
     filename: str | None,
     generated_at: datetime,
+    dashboard_label: str | None,
 ) -> str:
     """Assembler le PDF et le sauvegarder sur disque."""
 
@@ -512,6 +864,8 @@ def _build_pdf(
     file_path = output_dir / filename
 
     builder = EnergyPDFBuilder(PDF_TITLE)
+    if dashboard_label:
+        builder.add_paragraph(f"Tableau d'énergie : {dashboard_label}", bold=True)
     builder.add_paragraph(
         (
             "Période analysée : "
