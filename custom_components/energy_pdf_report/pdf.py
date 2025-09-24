@@ -45,35 +45,29 @@ class _TemporaryFontCache:
         self._tempdir.cleanup()
 
 
-def _register_unicode_fonts(pdf: FPDF, font_dir: Path) -> None:
-    """Enregistrer les polices TrueType Unicode nécessaires."""
+
+def _register_unicode_fonts(pdf: FPDF) -> _TemporaryFontCache | None:
+    """Enregistrer les polices Unicode sur le PDF et retourner le cache."""
+
+    missing_styles = [
+        style for style in _FONT_FILES if f"{FONT_FAMILY.lower()}{style}" not in pdf.fonts
+    ]
+
+    if not missing_styles:
+        return None
+
+    cache = _TemporaryFontCache()
+
 
     for style, filename in _FONT_FILES.items():
         font_key = f"{FONT_FAMILY.lower()}{style}"
         if font_key in pdf.fonts:
             continue
 
-        pdf.add_font(FONT_FAMILY, style, str(font_dir / filename), uni=True)
+        pdf.add_font(FONT_FAMILY, style, str(cache.directory / filename), uni=True)
 
+    return cache
 
-FONT_FAMILY = "DejaVuSans"
-_FONT_FILES: dict[str, str] = {
-    "": "DejaVuSans.ttf",
-    "B": "DejaVuSans-Bold.ttf",
-}
-
-
-def _register_unicode_fonts(pdf: FPDF) -> None:
-    """Enregistrer les polices TrueType Unicode nécessaires."""
-
-    for style, filename in _FONT_FILES.items():
-        font_key = f"{FONT_FAMILY.lower()}{style}"
-        if font_key in pdf.fonts:
-            continue
-
-        font_path = resources.files(__package__).joinpath("fonts", filename)
-        with resources.as_file(font_path) as font_file:
-            pdf.add_font(FONT_FAMILY, style, str(font_file), uni=True)
 
 
 @dataclass(slots=True)
@@ -96,7 +90,7 @@ class EnergyPDFBuilder:
         self._pdf.set_auto_page_break(auto=True, margin=15)
         self._pdf.add_page()
 
-        _register_unicode_fonts(self._pdf, self._font_cache.directory)
+        self._font_cache = _register_unicode_fonts(self._pdf)
 
         self._pdf.set_title(title)
         self._pdf.set_creator("Home Assistant")
