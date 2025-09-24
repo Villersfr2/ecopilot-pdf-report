@@ -5,6 +5,7 @@ from __future__ import annotations
 import calendar
 from collections import defaultdict
 from dataclasses import dataclass
+from functools import partial
 from datetime import date, datetime, time, timedelta
 import logging
 from pathlib import Path
@@ -295,9 +296,7 @@ async def _collect_statistics(
         ) from err
 
     metadata = await instance.async_add_executor_job(
-        recorder_statistics.get_metadata,
-        hass,
-        statistic_ids=statistic_ids,
+        partial(recorder_statistics.get_metadata, hass, statistic_ids=statistic_ids)
     )
 
     stats_map = await instance.async_add_executor_job(
