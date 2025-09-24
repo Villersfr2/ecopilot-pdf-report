@@ -5,8 +5,10 @@ from __future__ import annotations
 import base64
 import zlib
 from dataclasses import dataclass
+
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
 from typing import Iterable, Sequence
 
 from fpdf import FPDF
@@ -43,6 +45,7 @@ class _TemporaryFontCache:
         self._tempdir.cleanup()
 
 
+
 def _register_unicode_fonts(pdf: FPDF) -> _TemporaryFontCache | None:
     """Enregistrer les polices Unicode sur le PDF et retourner le cache."""
 
@@ -55,13 +58,16 @@ def _register_unicode_fonts(pdf: FPDF) -> _TemporaryFontCache | None:
 
     cache = _TemporaryFontCache()
 
+
     for style, filename in _FONT_FILES.items():
         font_key = f"{FONT_FAMILY.lower()}{style}"
         if font_key in pdf.fonts:
             continue
+
         pdf.add_font(FONT_FAMILY, style, str(cache.directory / filename), uni=True)
 
     return cache
+
 
 
 @dataclass(slots=True)
@@ -79,10 +85,13 @@ class EnergyPDFBuilder:
 
     def __init__(self, title: str) -> None:
         """Initialiser le générateur de PDF."""
+        self._font_cache = _TemporaryFontCache()
         self._pdf = FPDF()
         self._pdf.set_auto_page_break(auto=True, margin=15)
         self._pdf.add_page()
+
         self._font_cache = _register_unicode_fonts(self._pdf)
+
         self._pdf.set_title(title)
         self._pdf.set_creator("Home Assistant")
         self._pdf.set_author("energy_pdf_report")

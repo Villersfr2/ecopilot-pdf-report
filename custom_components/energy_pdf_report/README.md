@@ -27,6 +27,7 @@ nettoyés. Cette approche garantit l'affichage correct des caractères accentué
 et des symboles internationaux sans nécessiter de fichiers binaires dans le
 dépôt.
 
+
 ## Script de vérification
 Pour valider rapidement que l'intégration, y compris la compatibilité avec le recorder,
 fonctionne correctement dans votre instance Home Assistant, un exemple de script est
