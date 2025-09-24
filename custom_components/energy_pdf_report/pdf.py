@@ -3,9 +3,30 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from importlib import resources
 from typing import Iterable, Sequence
 
 from fpdf import FPDF
+
+
+FONT_FAMILY = "DejaVuSans"
+_FONT_FILES: dict[str, str] = {
+    "": "DejaVuSans.ttf",
+    "B": "DejaVuSans-Bold.ttf",
+}
+
+
+def _register_unicode_fonts(pdf: FPDF) -> None:
+    """Enregistrer les polices TrueType Unicode nécessaires."""
+
+    for style, filename in _FONT_FILES.items():
+        font_key = f"{FONT_FAMILY.lower()}{style}"
+        if font_key in pdf.fonts:
+            continue
+
+        font_path = resources.files(__package__).joinpath("fonts", filename)
+        with resources.as_file(font_path) as font_file:
+            pdf.add_font(FONT_FAMILY, style, str(font_file), uni=True)
 
 
 @dataclass(slots=True)
@@ -26,10 +47,11 @@ class EnergyPDFBuilder:
         self._pdf = FPDF()
         self._pdf.set_auto_page_break(auto=True, margin=15)
         self._pdf.add_page()
+        _register_unicode_fonts(self._pdf)
         self._pdf.set_title(title)
         self._pdf.set_creator("Home Assistant")
         self._pdf.set_author("energy_pdf_report")
-        self._pdf.set_font("Helvetica", "B", 16)
+        self._pdf.set_font(FONT_FAMILY, "B", 16)
         self._pdf.cell(0, 10, title, ln=True)
         self._pdf.ln(2)
 
@@ -41,7 +63,7 @@ class EnergyPDFBuilder:
     def add_paragraph(self, text: str, bold: bool = False, size: int = 11) -> None:
         """Ajouter un paragraphe simple."""
         font_style = "B" if bold else ""
-        self._pdf.set_font("Helvetica", font_style, size)
+        self._pdf.set_font(FONT_FAMILY, font_style, size)
         self._ensure_space(6)
         self._pdf.multi_cell(0, 6, text)
         self._pdf.ln(1)
@@ -61,14 +83,14 @@ class EnergyPDFBuilder:
         header_height = 7
         row_height = 6
 
-        self._pdf.set_font("Helvetica", "B", 12)
+        self._pdf.set_font(FONT_FAMILY, "B", 12)
         self._ensure_space(header_height + 4)
         self._pdf.cell(0, 8, config.title, ln=True)
 
-        self._pdf.set_font("Helvetica", "B", 10)
+        self._pdf.set_font(FONT_FAMILY, "B", 10)
         self._draw_row(headers, column_widths, header_height)
 
-        self._pdf.set_font("Helvetica", "", 10)
+        self._pdf.set_font(FONT_FAMILY, "", 10)
         if not rows:
             empty_row = ["Aucune donnée disponible"] + [""] * (len(headers) - 1)
             self._draw_row(empty_row, column_widths, row_height)
@@ -82,7 +104,7 @@ class EnergyPDFBuilder:
 
     def add_footer(self, text: str) -> None:
         """Ajouter un texte de bas de page léger."""
-        self._pdf.set_font("Helvetica", "", 9)
+        self._pdf.set_font(FONT_FAMILY, "", 9)
         self._ensure_space(5)
         self._pdf.multi_cell(0, 5, text)
 
