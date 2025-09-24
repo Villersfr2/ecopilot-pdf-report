@@ -16,7 +16,7 @@
   "options": {
     "step": {
       "init": {
-        "description": "Aucune option supplémentaire n'est disponible."
+        "description": "Aucune option supplémentaire n'est disponible pour le moment."
       }
     }
   }
