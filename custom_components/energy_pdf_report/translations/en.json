@@ -1,0 +1,23 @@
+{
+
+  "config": {
+    "step": {
+      "reinstall_confirm": {
+        "title": "Replace existing Energy PDF Report",
+        "description": "An existing Energy PDF Report configuration ({title}) was found. Submit to remove it and install it again."
+      }
+    },
+    "abort": {
+      "remove_failed": "Removing the existing configuration failed. Please try again from Settings > Devices & Services.",
+      "already_configured": "Energy PDF Report is already configured."
+    }
+  },
+
+  "options": {
+    "step": {
+      "init": {
+        "description": "No additional options are available."
+      }
+    }
+  }
+}
