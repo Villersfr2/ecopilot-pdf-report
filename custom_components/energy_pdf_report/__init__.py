@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import calendar
+import inspect
+import logging
 from collections import defaultdict
 from dataclasses import dataclass
-from functools import partial
 from datetime import date, datetime, time, timedelta
-import logging
+from functools import partial
 from pathlib import Path
 from typing import Any, Iterable, TYPE_CHECKING
 
@@ -295,13 +296,20 @@ async def _collect_statistics(
             "Le composant recorder doit être actif pour générer le rapport."
         ) from err
 
-    metadata = await instance.async_add_executor_job(
-        partial(
+    metadata_job = partial(
+        recorder_statistics.get_metadata,
+        statistic_ids=statistic_ids,
+    )
+
+    metadata_signature = inspect.signature(recorder_statistics.get_metadata)
+    if metadata_signature.parameters.get("hass") is not None:
+        metadata_job = partial(
             recorder_statistics.get_metadata,
             hass,
             statistic_ids=statistic_ids,
         )
-    )
+
+    metadata = await instance.async_add_executor_job(metadata_job)
 
     stats_map = await instance.async_add_executor_job(
         recorder_statistics.statistics_during_period,
