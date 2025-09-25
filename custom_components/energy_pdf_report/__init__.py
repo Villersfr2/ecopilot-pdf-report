@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import calendar
+
 import inspect
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, tzinfo
+
 from pathlib import Path
 from typing import Any, Iterable, TYPE_CHECKING
 
@@ -73,6 +75,7 @@ class MetricDefinition:
 
     category: str
     statistic_id: str
+
 
 
 @dataclass(slots=True)
@@ -176,6 +179,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
     manager = await async_get_manager(hass)
 
+
     dashboard_requested: str | None = call.data.get(CONF_DASHBOARD)
     selection = await _async_select_dashboard_preferences(
         hass, manager, dashboard_requested
@@ -184,6 +188,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
     start, end, display_start, display_end, bucket = _resolve_period(hass, call.data)
     metrics = _build_metrics(preferences)
+
 
     if not metrics:
         raise HomeAssistantError(
@@ -247,6 +252,7 @@ async def _async_select_dashboard_preferences(
     """Sélectionner les préférences énergie pour le tableau demandé."""
 
     dashboards = _collect_dashboard_preferences(manager)
+
 
     if requested_dashboard:
         normalized = _normalize_dashboard_key(requested_dashboard)
@@ -516,6 +522,7 @@ async def _async_fetch_dashboard_preferences_via_methods(
 
             result = await _await_if_needed(result)
 
+
             selections = _extract_named_preferences(result, dashboard_id)
             if selections:
                 requested = _normalize_dashboard_key(dashboard_id)
@@ -561,6 +568,7 @@ def _format_dashboard_label(selection: DashboardSelection) -> str | None:
     return name or identifier
 
 
+
 def _resolve_period(
     hass: HomeAssistant, call_data: dict[str, Any]
 ) -> tuple[datetime, datetime, datetime, datetime, str]:
@@ -602,7 +610,6 @@ def _resolve_period(
     # on travaille avec une fin exclusive (lendemain à 00:00)
     end_local_exclusive = _localize_date(end_date + timedelta(days=1), timezone)
 
-    bucket = _select_bucket(period, start_local, end_local_exclusive)
 
     start_utc = dt_util.as_utc(start_local)
     end_utc = dt_util.as_utc(end_local_exclusive)
@@ -667,6 +674,49 @@ def _select_bucket(period: str, start_local: datetime, end_local_exclusive: date
         return "day"
 
     return "month"
+
+
+def _localize_date(day: date, timezone: tzinfo) -> datetime:
+    """Assembler une date locale en tenant compte des transitions horaires."""
+
+    naive = datetime.combine(day, time.min)
+    localize = getattr(timezone, "localize", None)
+    if callable(localize):  # pytz support
+        return localize(naive)
+    return naive.replace(tzinfo=timezone)
+
+
+def _coerce_service_date(value: Any, field: str) -> date | None:
+    """Convertir une valeur issue du service en date."""
+
+    if value is None:
+        return None
+
+    if isinstance(value, datetime):
+        return value.date()
+
+    if isinstance(value, date):
+        return value
+
+    if isinstance(value, str):
+        parsed = dt_util.parse_date(value)
+        if parsed is not None:
+            return parsed
+
+    raise HomeAssistantError(
+        f"Impossible d'interpréter {field} comme une date valide (format attendu YYYY-MM-DD)."
+    )
+
+
+def _select_timezone(hass: HomeAssistant) -> tzinfo:
+    """Déterminer le fuseau horaire à utiliser pour les conversions locales."""
+
+    if hass.config.time_zone:
+        timezone = dt_util.get_time_zone(hass.config.time_zone)
+        if timezone is not None:
+            return timezone
+
+    return dt_util.DEFAULT_TIME_ZONE
 
 
 def _localize_date(day: date, timezone: tzinfo) -> datetime:
@@ -782,6 +832,7 @@ async def _collect_statistics(
             )
         else:
             raise
+
 
     stats_map = await instance.async_add_executor_job(
         recorder_statistics.statistics_during_period,
