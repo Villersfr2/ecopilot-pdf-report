@@ -1037,7 +1037,9 @@ def _build_pdf(
         details=cover_details,
     )
 
-    builder.add_section_title("Synthèse globale")
+
+    builder.add_section_title("Résumé global")
+
     builder.add_paragraph(
         "Cette section présente les totaux consolidés sur la période analysée."
     )
@@ -1062,7 +1064,9 @@ def _build_pdf(
         "Les valeurs négatives indiquent un flux exporté ou une compensation."
     )
 
-    builder.add_section_title("Détail par catégorie / source")
+
+    builder.add_section_title("Analyse par catégorie / source")
+
     builder.add_paragraph(
         "Chaque statistique suivie est listée avec sa contribution précise afin de"
         " faciliter l'analyse fine par origine ou type de consommation."
@@ -1082,15 +1086,41 @@ def _build_pdf(
     if summary_series:
         builder.add_paragraph(
             "La visualisation suivante met en avant la répartition des flux"
-            " pour chaque catégorie suivie."
+
+            " pour chaque catégorie suivie et matérialise l'équilibre"
+            " production / consommation."
         )
         builder.add_chart("Répartition par catégorie", summary_series)
 
-    builder.add_section_title("Historique / Évolution")
+    builder.add_section_title("Conclusion")
+
+    if summary_series:
+        units = {unit for _, _, unit in summary_series if unit}
+        unit_label = units.pop() if len(units) == 1 else None
+        total_value = sum(value for _, value, _ in summary_series)
+        formatted_total = _format_number(total_value)
+        if unit_label:
+            formatted_total = f"{formatted_total} {unit_label}"
+        builder.add_paragraph(
+            f"Le flux net observé sur la période atteint {formatted_total}.",
+            bold=True,
+        )
+
+        dominant_category, dominant_value, dominant_unit = max(
+            summary_series, key=lambda item: abs(item[1])
+        )
+        formatted_dominant = _format_number(dominant_value)
+        if dominant_unit:
+            formatted_dominant = f"{formatted_dominant} {dominant_unit}"
+        builder.add_paragraph(
+            "La catégorie la plus significative est "
+            f"{dominant_category} avec {formatted_dominant}."
+        )
+
     builder.add_paragraph(
-        "Les données historiques détaillées ne sont pas fournies par cette"
-        " intégration. Utilisez le tableau de bord Énergie pour explorer"
-        " l'évolution temporelle précise."
+        "Pour approfondir l'évolution temporelle et comparer les périodes,"
+        " référez-vous au tableau de bord Énergie de Home Assistant."
+
     )
 
     builder.add_footer(f"Chemin du fichier : {file_path}")

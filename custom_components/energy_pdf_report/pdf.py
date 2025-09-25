@@ -15,13 +15,6 @@ from fpdf import FPDF
 try:  # pragma: no cover - matplotlib est optionnel durant les tests
     import matplotlib
 
-    matplotlib.use("Agg")
-    from matplotlib import pyplot as plt
-except Exception:  # pragma: no cover - matplotlib absent
-    matplotlib = None
-    plt = None
-
-from .font_data import FONT_DATA
 
 FONT_FAMILY = "DejaVuSans"
 _FONT_FILES: dict[str, str] = {
@@ -38,6 +31,22 @@ ZEBRA_COLORS = ((255, 255, 255), (245, 249, 252))
 TOTAL_FILL_COLOR = (235, 239, 243)
 TOTAL_TEXT_COLOR = (87, 96, 106)
 SECTION_SPACING = 6
+
+CHART_BACKGROUND = (245, 249, 253)
+BAR_TRACK_COLOR = (226, 235, 243)
+BAR_BORDER_COLOR = (202, 214, 223)
+
+_CATEGORY_COLORS: tuple[tuple[str, tuple[int, int, int]], ...] = (
+    ("solaire", (241, 196, 15)),
+    ("électricité", (52, 152, 219)),
+    ("réseau", (52, 152, 219)),
+    ("consommation", (46, 134, 193)),
+    ("production", (39, 174, 96)),
+    ("gaz", (231, 76, 60)),
+    ("eau", (26, 188, 156)),
+    ("batterie", (155, 89, 182)),
+)
+
 
 _CATEGORY_ICON_HINTS: tuple[tuple[str, str], ...] = (
     ("solaire", "🌞"),
@@ -163,8 +172,7 @@ class EnergyPDFBuilder:
         self._pdf.set_auto_page_break(auto=True, margin=18)
         self._pdf.alias_nb_pages()
         self._font_cache = _register_unicode_fonts(self._pdf)
-        self._assets_cache = TemporaryDirectory(prefix="energy_pdf_report_assets_")
-        self._assets_dir = Path(self._assets_cache.name)
+
         self._logo_path = self._validate_logo(logo_path)
         self._content_started = False
         self._pdf.set_title(title)
@@ -315,12 +323,13 @@ class EnergyPDFBuilder:
         series: Sequence[tuple[str, float, str]],
         ylabel: str | None = None,
     ) -> None:
-        """Ajouter un graphique issu de matplotlib si disponible."""
 
-        if not series or plt is None:
+        """Dessiner un graphique en barres/gauges directement avec fpdf2."""
+
+        if not series:
             return
 
-        labels = [label for label, _, _ in series]
+
         values = [value for _, value, _ in series]
         if not any(abs(value) > 1e-6 for value in values):
             return
@@ -329,39 +338,98 @@ class EnergyPDFBuilder:
         if ylabel is None and len(units) == 1:
             (ylabel,) = tuple(units)
 
-        fig, ax = plt.subplots(figsize=(6.4, 3.2))
-        bars = ax.bar(labels, values, color=f"#{PRIMARY_COLOR[0]:02X}{PRIMARY_COLOR[1]:02X}{PRIMARY_COLOR[2]:02X}")
-        ax.set_title(title)
-        ax.set_ylabel(ylabel or "")
-        ax.tick_params(axis="x", rotation=20)
-        ax.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.6)
 
-        for bar in bars:
-            height = bar.get_height()
-            offset = 4 if height >= 0 else -12
-            valign = "bottom" if height >= 0 else "top"
-            ax.annotate(
-                f"{height:.1f}",
-                xy=(bar.get_x() + bar.get_width() / 2, height),
-                xytext=(0, offset),
-                textcoords="offset points",
-                ha="center",
-                va=valign,
-                fontsize=8,
-            )
-
-        image_path = self._assets_dir / f"chart_{len(list(self._assets_dir.iterdir()))}.png"
-        fig.tight_layout()
-        fig.savefig(image_path, dpi=200)
-        plt.close(fig)
+        num_bars = len(series)
+        bar_height = 8
+        bar_spacing = 4
+        padding_top = 8
+        padding_bottom = 8
+        chart_height = padding_top + padding_bottom + num_bars * bar_height + max(0, num_bars - 1) * bar_spacing
 
         self._ensure_content_page()
-        self._ensure_space(60)
+        self._ensure_space(chart_height + 20)
         self._pdf.set_font(FONT_FAMILY, "B", 12)
         self._pdf.cell(0, 8, title, ln=True)
-        self._pdf.ln(2)
-        self._pdf.image(str(image_path), w=self._available_width)
-        self._pdf.ln(4)
+        if ylabel:
+            self._pdf.set_font(FONT_FAMILY, "", 9)
+            self._pdf.set_text_color(*LIGHT_TEXT_COLOR)
+            self._pdf.cell(0, 5, f"Unités : {ylabel}", ln=True)
+            self._pdf.set_text_color(*self._default_text_color)
+        else:
+            self._pdf.ln(1)
+
+        chart_left = self._pdf.l_margin
+        chart_width = self._available_width
+        value_width = max(32.0, min(60.0, chart_width * 0.18))
+        label_width = max(45.0, min(90.0, chart_width * 0.38))
+        bar_area_width = chart_width - label_width - value_width - 8
+        if bar_area_width < 70:
+            label_width = max(40.0, chart_width - value_width - 70.0 - 8.0)
+            bar_area_width = chart_width - label_width - value_width - 8
+        if bar_area_width < 60:
+            value_width = max(30.0, chart_width - label_width - 60.0 - 8.0)
+            bar_area_width = chart_width - label_width - value_width - 8
+        bar_area_width = max(55.0, bar_area_width)
+
+        chart_top = self._pdf.get_y()
+        self._pdf.set_fill_color(*CHART_BACKGROUND)
+        self._pdf.set_draw_color(*BORDER_COLOR)
+        self._pdf.rect(chart_left, chart_top, chart_width, chart_height, style="F")
+        self._pdf.rect(chart_left, chart_top, chart_width, chart_height)
+
+        bar_area_left = chart_left + label_width + 4
+        positive_max = max((value for value in values if value > 0), default=0.0)
+        negative_min = min((value for value in values if value < 0), default=0.0)
+
+        if positive_max > 0 and negative_min < 0:
+            total_span = positive_max + abs(negative_min)
+            zero_x = bar_area_left + (abs(negative_min) / total_span) * bar_area_width
+        elif positive_max > 0:
+            zero_x = bar_area_left
+        else:
+            zero_x = bar_area_left + bar_area_width
+
+        positive_span = bar_area_left + bar_area_width - zero_x
+        negative_span = zero_x - bar_area_left
+        positive_scale = positive_span / positive_max if positive_max > 0 else 0
+        negative_scale = negative_span / abs(negative_min) if negative_min < 0 else 0
+
+        self._pdf.set_draw_color(*BAR_BORDER_COLOR)
+        self._pdf.line(zero_x, chart_top, zero_x, chart_top + chart_height)
+
+        current_y = chart_top + padding_top
+        for label, value, unit in series:
+            track_top = current_y
+            category_color = _get_category_color(label)
+            self._pdf.set_fill_color(*BAR_TRACK_COLOR)
+            self._pdf.rect(bar_area_left, track_top, bar_area_width, bar_height, style="F")
+
+            if value >= 0 and positive_scale > 0:
+                bar_width = max(0.5, value * positive_scale)
+                self._pdf.set_fill_color(*category_color)
+                self._pdf.rect(zero_x, track_top, bar_width, bar_height, style="F")
+            elif value < 0 and negative_scale > 0:
+                bar_width = max(0.5, abs(value) * negative_scale)
+                self._pdf.set_fill_color(*category_color)
+                self._pdf.rect(zero_x - bar_width, track_top, bar_width, bar_height, style="F")
+
+            self._pdf.set_draw_color(*BAR_BORDER_COLOR)
+            self._pdf.rect(bar_area_left, track_top, bar_area_width, bar_height)
+
+            self._pdf.set_text_color(*TEXT_COLOR)
+            self._pdf.set_font(FONT_FAMILY, "", 10)
+            label_text = _decorate_category(label)
+            self._pdf.set_xy(chart_left + 4, track_top + 1)
+            self._pdf.cell(label_width - 4, bar_height - 2, label_text, align="L")
+
+            value_text = _format_measure(value, unit)
+            self._pdf.set_xy(bar_area_left + bar_area_width + 4, track_top + 1)
+            self._pdf.cell(value_width, bar_height - 2, value_text, align="R")
+
+            current_y += bar_height + bar_spacing
+
+        self._pdf.set_y(chart_top + chart_height + 4)
+
 
     def compute_column_widths(self, weights: Sequence[float]) -> list[float]:
         """Convertir des poids relatifs en largeurs exploitables par FPDF."""
@@ -465,6 +533,38 @@ def _decorate_category(label: str) -> str:
         if keyword in lowered and not normalized.startswith(icon):
             return f"{icon} {normalized}"
     return normalized
+
+
+
+def _get_category_color(label: str) -> tuple[int, int, int]:
+    """Choisir une couleur fixe en fonction de la catégorie."""
+
+    lowered = label.lower()
+    for keyword, color in _CATEGORY_COLORS:
+        if keyword in lowered:
+            return color
+    return PRIMARY_COLOR
+
+
+def _format_measure(value: float, unit: str | None) -> str:
+    """Formater une valeur numérique avec unité."""
+
+    formatted = _format_number(value)
+    return f"{formatted} {unit}".strip() if unit else formatted
+
+
+def _format_number(value: float) -> str:
+    """Formater un nombre pour l'affichage dans le PDF."""
+
+    magnitude = abs(value)
+    if magnitude >= 1000:
+        formatted = f"{value:,.0f}"
+    elif magnitude >= 100:
+        formatted = f"{value:,.1f}"
+    else:
+        formatted = f"{value:,.2f}"
+    return formatted.replace(",", " ")
+
 
 
 __all__ = ["EnergyPDFBuilder", "TableConfig"]
