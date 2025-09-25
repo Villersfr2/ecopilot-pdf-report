@@ -1,7 +1,5 @@
 """Génération de rapports PDF pour l'intégration energy_pdf_report."""
 
-from __future__ import annotations
-
 import base64
 import zlib
 from contextlib import ExitStack
@@ -9,15 +7,16 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Iterable, Sequence
+
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 from fpdf import FPDF
 
-try:  # pragma: no cover - matplotlib est optionnel durant les tests
-    import matplotlib
+from .font_data import FONT_DATA
+
 
 FONT_FAMILY = "DejaVuSans"
-_FONT_FILES: dict[str, str] = {
+_FONT_FILES: Dict[str, str] = {
     "": "DejaVuSans.ttf",
     "B": "DejaVuSans-Bold.ttf",
 }
@@ -36,7 +35,9 @@ CHART_BACKGROUND = (245, 249, 253)
 BAR_TRACK_COLOR = (226, 235, 243)
 BAR_BORDER_COLOR = (202, 214, 223)
 
-_CATEGORY_COLORS: tuple[tuple[str, tuple[int, int, int]], ...] = (
+
+_CATEGORY_COLORS: Tuple[Tuple[str, Tuple[int, int, int]], ...] = (
+
     ("solaire", (241, 196, 15)),
     ("électricité", (52, 152, 219)),
     ("réseau", (52, 152, 219)),
@@ -48,7 +49,8 @@ _CATEGORY_COLORS: tuple[tuple[str, tuple[int, int, int]], ...] = (
 )
 
 
-_CATEGORY_ICON_HINTS: tuple[tuple[str, str], ...] = (
+_CATEGORY_ICON_HINTS: Tuple[Tuple[str, str], ...] = (
+
     ("solaire", "🌞"),
     ("réseau", "⚡"),
     ("électricité", "⚡"),
@@ -82,7 +84,7 @@ class _TemporaryFontCache:
         self._tempdir.cleanup()
 
 
-def _register_unicode_fonts(pdf: FPDF) -> _TemporaryFontCache | None:
+def _register_unicode_fonts(pdf: FPDF) -> Optional[_TemporaryFontCache]:
     """Enregistrer les polices Unicode sur le PDF et retourner le cache."""
 
     missing_styles = [
@@ -104,15 +106,18 @@ def _register_unicode_fonts(pdf: FPDF) -> _TemporaryFontCache | None:
     return cache
 
 
-@dataclass(slots=True)
+
+@dataclass
+
 class TableConfig:
     """Configuration d'un tableau à insérer dans le PDF."""
 
     title: str
     headers: Sequence[str]
     rows: Iterable[Sequence[str]]
-    column_widths: Sequence[float] | None = None
-    emphasize_rows: Sequence[int] | None = None
+
+    column_widths: Optional[Sequence[float]] = None
+    emphasize_rows: Optional[Sequence[int]] = None
 
 
 class EnergyReportPDF(FPDF):
@@ -126,7 +131,6 @@ class EnergyReportPDF(FPDF):
         self._suppress_header = False
         self._suppress_footer = False
         self.set_margins(15, 22, 15)
-
 
     def header(self) -> None:  # pragma: no cover - géré par fpdf
         if self._suppress_header:
@@ -166,7 +170,9 @@ class EnergyPDFBuilder:
         title: str,
         period_label: str,
         generated_at: datetime,
-        logo_path: str | Path | None = None,
+
+        logo_path: Optional[Union[str, Path]] = None,
+
     ) -> None:
         """Initialiser le générateur de PDF."""
 
@@ -192,7 +198,9 @@ class EnergyPDFBuilder:
         self,
         subtitle: str,
         details: Sequence[str],
-        logo_path: str | Path | None = None,
+
+        logo_path: Optional[Union[str, Path]] = None,
+
     ) -> None:
         """Ajouter une page de garde élégante."""
 
@@ -322,8 +330,9 @@ class EnergyPDFBuilder:
     def add_chart(
         self,
         title: str,
-        series: Sequence[tuple[str, float, str]],
-        ylabel: str | None = None,
+
+        series: Sequence[Tuple[str, float, str]],
+        ylabel: Optional[str] = None,
     ) -> None:
 
         """Dessiner un graphique en barres/gauges directement avec fpdf2."""
@@ -433,7 +442,8 @@ class EnergyPDFBuilder:
         self._pdf.set_y(chart_top + chart_height + 4)
 
 
-    def compute_column_widths(self, weights: Sequence[float]) -> list[float]:
+    def compute_column_widths(self, weights: Sequence[float]) -> List[float]:
+
         """Convertir des poids relatifs en largeurs exploitables par FPDF."""
 
         if not weights:
@@ -493,8 +503,10 @@ class EnergyPDFBuilder:
         height: float,
         *,
         fill: bool = False,
-        fill_color: tuple[int, int, int] | None = None,
-        text_color: tuple[int, int, int] | None = None,
+
+        fill_color: Optional[Tuple[int, int, int]] = None,
+        text_color: Optional[Tuple[int, int, int]] = None,
+
         font_style: str = "",
     ) -> None:
         """Dessiner une ligne du tableau."""
@@ -518,7 +530,9 @@ class EnergyPDFBuilder:
         if self._pdf.get_y() + height > self._pdf.page_break_trigger:
             self._pdf.add_page()
 
-    def _validate_logo(self, logo_path: str | Path | None) -> Path | None:
+
+    def _validate_logo(self, logo_path: Optional[Union[str, Path]]) -> Optional[Path]:
+
         if not logo_path:
             return None
         path = Path(logo_path)
@@ -538,8 +552,8 @@ def _decorate_category(label: str) -> str:
     return normalized
 
 
+def _get_category_color(label: str) -> Tuple[int, int, int]:
 
-def _get_category_color(label: str) -> tuple[int, int, int]:
     """Choisir une couleur fixe en fonction de la catégorie."""
 
     lowered = label.lower()
@@ -549,7 +563,9 @@ def _get_category_color(label: str) -> tuple[int, int, int]:
     return PRIMARY_COLOR
 
 
-def _format_measure(value: float, unit: str | None) -> str:
+
+def _format_measure(value: float, unit: Optional[str]) -> str:
+
     """Formater une valeur numérique avec unité."""
 
     formatted = _format_number(value)
