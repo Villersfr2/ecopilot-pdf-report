@@ -117,8 +117,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     domain_data = hass.data[DOMAIN]
     domain_data.setdefault(DATA_CONFIG_ENTRY_IDS, set())
 
-    if DOMAIN in config:
-        _async_register_services(hass)
+    _async_register_services(hass)
 
     return True
 
@@ -271,6 +270,7 @@ async def _async_select_dashboard_preferences(
         raise HomeAssistantError(
             f"Aucun tableau de bord énergie nommé '{requested_dashboard}' n'a été trouvé."
         )
+
 
     if dashboards:
         return _pick_default_dashboard(manager, dashboards)
@@ -535,6 +535,7 @@ async def _async_fetch_dashboard_preferences_via_methods(
                                 )
                             return selection
 
+
                 primary = selections[0]
                 if primary.identifier is None:
                     return DashboardSelection(dashboard_id, primary.name, primary.preferences)
@@ -567,18 +568,6 @@ def _format_dashboard_label(selection: DashboardSelection) -> str | None:
 
     return name or identifier
 
-
-            selections = _extract_named_preferences(result, dashboard_id)
-            if selections:
-                requested = _normalize_dashboard_key(dashboard_id)
-                if requested:
-                    for selection in selections:
-                        if _match_dashboard_key(selection, requested):
-                            if selection.identifier is None:
-                                return DashboardSelection(
-                                    dashboard_id, selection.name, selection.preferences
-                                )
-                            return selection
 
 
 def _resolve_period(
