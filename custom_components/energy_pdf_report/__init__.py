@@ -128,7 +128,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Configurer une entrée de configuration."""
 
     domain_data = hass.data.setdefault(DOMAIN, {})
+
     domain_data[entry.entry_id] = entry.data
+
 
     _async_register_services(hass)
 
@@ -192,6 +194,7 @@ def _get_config_entry_options(hass: HomeAssistant) -> dict[str, Any]:
     options: dict[str, Any] = {}
     for entry in entries:
         if not active_ids or entry.entry_id in active_ids:
+
             entry_options = entry.options or {}
             for key in _ALLOWED_OPTION_KEYS:
                 if key in entry_options:
@@ -202,6 +205,7 @@ def _get_config_entry_options(hass: HomeAssistant) -> dict[str, Any]:
                 and entry_options[CONF_PERIOD] in VALID_PERIODS
             ):
                 options[CONF_DEFAULT_REPORT_TYPE] = entry_options[CONF_PERIOD]
+
 
     return options
 
@@ -238,9 +242,11 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     options = _get_config_entry_options(hass)
     call_data = dict(call.data)
 
+
     option_report_type = options.get(CONF_DEFAULT_REPORT_TYPE)
     if option_report_type not in VALID_PERIODS:
         option_report_type = None
+
 
     period_value = call_data.get(CONF_PERIOD)
     if period_value not in VALID_PERIODS:
@@ -1061,7 +1067,9 @@ def _build_pdf(
         details=cover_details,
     )
 
+
     builder.add_section_title("Résumé global")
+
     builder.add_paragraph(
         "Cette section présente les totaux consolidés sur la période analysée."
     )
@@ -1086,7 +1094,9 @@ def _build_pdf(
         "Les valeurs négatives indiquent un flux exporté ou une compensation."
     )
 
+
     builder.add_section_title("Analyse par catégorie / source")
+
     builder.add_paragraph(
         "Chaque statistique suivie est listée avec sa contribution précise afin de"
         " faciliter l'analyse fine par origine ou type de consommation."
@@ -1106,6 +1116,7 @@ def _build_pdf(
     if summary_series:
         builder.add_paragraph(
             "La visualisation suivante met en avant la répartition des flux"
+
             " pour chaque catégorie suivie et matérialise l'équilibre"
             " production / consommation."
         )
@@ -1138,7 +1149,9 @@ def _build_pdf(
 
     builder.add_paragraph(
         "Pour approfondir l'évolution temporelle et comparer les périodes,"
+
         " référez-vous au tableau de bord Énergie de Home Assistant."
+
     )
 
     builder.add_footer(f"Chemin du fichier : {file_path}")
