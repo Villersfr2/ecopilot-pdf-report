@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import calendar
+
 import inspect
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, tzinfo
+
 from pathlib import Path
 from typing import Any, Iterable, TYPE_CHECKING
 
@@ -73,6 +75,7 @@ class MetricDefinition:
 
     category: str
     statistic_id: str
+
 
 
 @dataclass(slots=True)
@@ -176,6 +179,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
     manager = await async_get_manager(hass)
 
+
     dashboard_requested: str | None = call.data.get(CONF_DASHBOARD)
     selection = await _async_select_dashboard_preferences(
         hass, manager, dashboard_requested
@@ -184,6 +188,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
     start, end, display_start, display_end, bucket = _resolve_period(hass, call.data)
     metrics = _build_metrics(preferences)
+
 
     if not metrics:
         raise HomeAssistantError(
@@ -268,6 +273,7 @@ async def _async_select_dashboard_preferences(
 
     if dashboards:
         return _pick_default_dashboard(manager, dashboards)
+
 
     data = getattr(manager, "data", None)
     if _is_energy_preferences(data):
@@ -561,6 +567,7 @@ def _format_dashboard_label(selection: DashboardSelection) -> str | None:
     return name or identifier
 
 
+
 def _resolve_period(
     hass: HomeAssistant, call_data: dict[str, Any]
 ) -> tuple[datetime, datetime, datetime, datetime, str]:
@@ -755,6 +762,7 @@ async def _collect_statistics(
             )
         else:
             raise
+
 
     stats_map = await instance.async_add_executor_job(
         recorder_statistics.statistics_during_period,
