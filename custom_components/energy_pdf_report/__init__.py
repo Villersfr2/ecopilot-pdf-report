@@ -69,8 +69,7 @@ SERVICE_GENERATE_SCHEMA = vol.Schema(
 )
 
 
-DATA_SERVICES_REGISTERED = "services_registered"
-DATA_CONFIG_ENTRY_IDS = "entry_ids"
+DATA_SERVICES_REGISTERED = "_services_registered"
 
 @dataclass(slots=True)
 class MetricDefinition:
@@ -117,8 +116,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Initialiser les structures de données du domaine."""
 
     hass.data.setdefault(DOMAIN, {})
-    domain_data = hass.data[DOMAIN]
-    domain_data.setdefault(DATA_CONFIG_ENTRY_IDS, set())
 
     _async_register_services(hass)
 
@@ -129,8 +126,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Configurer une entrée de configuration."""
 
     domain_data = hass.data.setdefault(DOMAIN, {})
-    entry_ids: set[str] = domain_data.setdefault(DATA_CONFIG_ENTRY_IDS, set())
-    entry_ids.add(entry.entry_id)
+    domain_data[entry.entry_id] = dict(entry.data)
 
     _async_register_services(hass)
 
@@ -144,10 +140,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not domain_data:
         return True
 
-    entry_ids: set[str] = domain_data.setdefault(DATA_CONFIG_ENTRY_IDS, set())
-    entry_ids.discard(entry.entry_id)
+    domain_data.pop(entry.entry_id, None)
 
-    if not entry_ids:
+    if not _domain_has_config_entries(domain_data):
         hass.services.async_remove(DOMAIN, SERVICE_GENERATE_REPORT)
         domain_data.pop(DATA_SERVICES_REGISTERED, None)
         hass.data.pop(DOMAIN, None)
@@ -182,20 +177,31 @@ def _get_config_entry_options(hass: HomeAssistant) -> dict[str, Any]:
     entries = hass.config_entries.async_entries(DOMAIN)
     if not entries:
         return {}
-
     domain_data = hass.data.get(DOMAIN) or {}
-    entry_ids = domain_data.get(DATA_CONFIG_ENTRY_IDS)
+    active_ids = _active_entry_ids(domain_data)
 
     options: dict[str, Any] = {}
-
-    if isinstance(entry_ids, set) and entry_ids:
-        for entry in entries:
-            if entry.entry_id in entry_ids:
-                options.update(entry.options or {})
-    else:
-        options.update(entries[0].options or {})
+    for entry in entries:
+        if not active_ids or entry.entry_id in active_ids:
+            options.update(entry.options or {})
 
     return options
+
+
+def _active_entry_ids(domain_data: dict[str, Any]) -> set[str]:
+    """Retourner les identifiants d'entrée actifs dans hass.data."""
+
+    return {
+        key
+        for key in domain_data
+        if key != DATA_SERVICES_REGISTERED and isinstance(domain_data[key], dict)
+    }
+
+
+def _domain_has_config_entries(domain_data: dict[str, Any]) -> bool:
+    """Déterminer s'il reste des entrées configurées dans hass.data."""
+
+    return bool(_active_entry_ids(domain_data))
 
 
 async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None:
@@ -1119,7 +1125,7 @@ def _build_pdf(
 
     builder.add_paragraph(
         "Pour approfondir l'évolution temporelle et comparer les périodes,"
-        " référez-vous au tableau de bord Énergie de Home Assistant."
+        " référez-vous au tableau de bord Énergie de EcoPilot."
 
     )
 
