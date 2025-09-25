@@ -1037,7 +1037,9 @@ def _build_pdf(
         details=cover_details,
     )
 
+
     builder.add_section_title("Résumé global")
+
     builder.add_paragraph(
         "Cette section présente les totaux consolidés sur la période analysée."
     )
@@ -1062,7 +1064,9 @@ def _build_pdf(
         "Les valeurs négatives indiquent un flux exporté ou une compensation."
     )
 
+
     builder.add_section_title("Analyse par catégorie / source")
+
     builder.add_paragraph(
         "Chaque statistique suivie est listée avec sa contribution précise afin de"
         " faciliter l'analyse fine par origine ou type de consommation."
@@ -1082,6 +1086,7 @@ def _build_pdf(
     if summary_series:
         builder.add_paragraph(
             "La visualisation suivante met en avant la répartition des flux"
+
             " pour chaque catégorie suivie et matérialise l'équilibre"
             " production / consommation."
         )
@@ -1115,6 +1120,7 @@ def _build_pdf(
     builder.add_paragraph(
         "Pour approfondir l'évolution temporelle et comparer les périodes,"
         " référez-vous au tableau de bord Énergie de Home Assistant."
+
     )
 
     builder.add_footer(f"Chemin du fichier : {file_path}")

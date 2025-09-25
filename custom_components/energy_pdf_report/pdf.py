@@ -13,7 +13,8 @@ from typing import Iterable, Sequence
 
 from fpdf import FPDF
 
-from .font_data import FONT_DATA
+try:  # pragma: no cover - matplotlib est optionnel durant les tests
+    import matplotlib
 
 FONT_FAMILY = "DejaVuSans"
 _FONT_FILES: dict[str, str] = {
@@ -30,6 +31,7 @@ ZEBRA_COLORS = ((255, 255, 255), (245, 249, 252))
 TOTAL_FILL_COLOR = (235, 239, 243)
 TOTAL_TEXT_COLOR = (87, 96, 106)
 SECTION_SPACING = 6
+
 CHART_BACKGROUND = (245, 249, 253)
 BAR_TRACK_COLOR = (226, 235, 243)
 BAR_BORDER_COLOR = (202, 214, 223)
@@ -44,6 +46,7 @@ _CATEGORY_COLORS: tuple[tuple[str, tuple[int, int, int]], ...] = (
     ("eau", (26, 188, 156)),
     ("batterie", (155, 89, 182)),
 )
+
 
 _CATEGORY_ICON_HINTS: tuple[tuple[str, str], ...] = (
     ("solaire", "🌞"),
@@ -124,6 +127,7 @@ class EnergyReportPDF(FPDF):
         self._suppress_footer = False
         self.set_margins(15, 22, 15)
 
+
     def header(self) -> None:  # pragma: no cover - géré par fpdf
         if self._suppress_header:
             return
@@ -153,6 +157,7 @@ class EnergyReportPDF(FPDF):
         self.set_text_color(*TEXT_COLOR)
 
 
+
 class EnergyPDFBuilder:
     """Constructeur simplifié de rapports PDF professionnels."""
 
@@ -169,6 +174,7 @@ class EnergyPDFBuilder:
         self._pdf.set_auto_page_break(auto=True, margin=18)
         self._pdf.alias_nb_pages()
         self._font_cache = _register_unicode_fonts(self._pdf)
+
         self._logo_path = self._validate_logo(logo_path)
         self._content_started = False
         self._pdf.set_title(title)
@@ -319,10 +325,12 @@ class EnergyPDFBuilder:
         series: Sequence[tuple[str, float, str]],
         ylabel: str | None = None,
     ) -> None:
+
         """Dessiner un graphique en barres/gauges directement avec fpdf2."""
 
         if not series:
             return
+
 
         values = [value for _, value, _ in series]
         if not any(abs(value) > 1e-6 for value in values):
@@ -331,6 +339,7 @@ class EnergyPDFBuilder:
         units = {unit for _, _, unit in series if unit}
         if ylabel is None and len(units) == 1:
             (ylabel,) = tuple(units)
+
 
         num_bars = len(series)
         bar_height = 8
@@ -423,6 +432,7 @@ class EnergyPDFBuilder:
 
         self._pdf.set_y(chart_top + chart_height + 4)
 
+
     def compute_column_widths(self, weights: Sequence[float]) -> list[float]:
         """Convertir des poids relatifs en largeurs exploitables par FPDF."""
 
@@ -447,11 +457,13 @@ class EnergyPDFBuilder:
         self._pdf.set_text_color(*self._default_text_color)
 
     def output(self, path: str) -> None:
+
         """Sauvegarder le PDF en garantissant le nettoyage des ressources."""
 
         with ExitStack() as stack:
             stack.callback(self._cleanup_resources)
             self._pdf.output(path)
+
 
     def _cleanup_resources(self) -> None:
         """Nettoyer les répertoires temporaires."""
@@ -460,6 +472,11 @@ class EnergyPDFBuilder:
         if cache is not None:
             cache.cleanup()
             self._font_cache = None
+
+        assets_cache = getattr(self, "_assets_cache", None)
+        if assets_cache is not None:
+            assets_cache.cleanup()
+            self._assets_cache = None
 
     def __del__(self) -> None:  # pragma: no cover - best effort cleanup
         self._cleanup_resources()
@@ -521,6 +538,7 @@ def _decorate_category(label: str) -> str:
     return normalized
 
 
+
 def _get_category_color(label: str) -> tuple[int, int, int]:
     """Choisir une couleur fixe en fonction de la catégorie."""
 
@@ -549,6 +567,7 @@ def _format_number(value: float) -> str:
     else:
         formatted = f"{value:,.2f}"
     return formatted.replace(",", " ")
+
 
 
 __all__ = ["EnergyPDFBuilder", "TableConfig"]
