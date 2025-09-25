@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import calendar
+
 import inspect
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, tzinfo
+
 from pathlib import Path
 from typing import Any, Iterable, TYPE_CHECKING
 
@@ -52,13 +54,16 @@ _LOGGER = logging.getLogger(__name__)
 
 _RECORDER_METADATA_REQUIRES_HASS: bool | None = None
 
+
 SERVICE_GENERATE_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_START_DATE): cv.date,
         vol.Optional(CONF_END_DATE): cv.date,
         vol.Optional(CONF_PERIOD): vol.In(VALID_PERIODS),
         vol.Optional(CONF_FILENAME): cv.string,
+
         vol.Optional(CONF_OUTPUT_DIR): cv.string,
+
         vol.Optional(CONF_DASHBOARD): cv.string,
     }
 )
@@ -73,6 +78,7 @@ class MetricDefinition:
 
     category: str
     statistic_id: str
+
 
 
 @dataclass(slots=True)
@@ -197,11 +203,13 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
     manager = await async_get_manager(hass)
 
+
     dashboard_requested: str | None = call.data.get(CONF_DASHBOARD)
     selection = await _async_select_dashboard_preferences(
         hass, manager, dashboard_requested
     )
     preferences = selection.preferences
+
 
     options = _get_config_entry_options(hass)
     call_data = dict(call.data)
@@ -219,6 +227,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
     start, end, display_start, display_end, bucket = _resolve_period(hass, call_data)
     metrics = _build_metrics(preferences)
+
 
     if not metrics:
         raise HomeAssistantError(
@@ -258,7 +267,9 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
         filename_pattern,
         generated_at,
         dashboard_label,
+
         period,
+
     )
 
     message_lines = [
@@ -292,6 +303,7 @@ async def _async_select_dashboard_preferences(
 
     dashboards = _collect_dashboard_preferences(manager)
 
+
     if requested_dashboard:
         normalized = _normalize_dashboard_key(requested_dashboard)
 
@@ -309,6 +321,7 @@ async def _async_select_dashboard_preferences(
         raise HomeAssistantError(
             f"Aucun tableau de bord énergie nommé '{requested_dashboard}' n'a été trouvé."
         )
+
 
     if dashboards:
         return _pick_default_dashboard(manager, dashboards)
@@ -517,11 +530,13 @@ def _pick_default_dashboard(
             if selection:
                 return selection
 
+
     for attr in ("selected_dashboard", "default_dashboard", "active_dashboard"):
         if hasattr(manager, attr):
             selection = _find_match(getattr(manager, attr))
             if selection:
                 return selection
+
 
     return dashboards[0]
 
@@ -583,6 +598,7 @@ async def _async_fetch_dashboard_preferences_via_methods(
     return None
 
 
+
 async def _await_if_needed(result: Any) -> Any:
     """Attendre une valeur si elle est awaitable."""
 
@@ -603,6 +619,7 @@ def _format_dashboard_label(selection: DashboardSelection) -> str | None:
         return f"{name} ({identifier})"
 
     return name or identifier
+
 
 
 def _resolve_period(
@@ -643,14 +660,17 @@ def _resolve_period(
     timezone = _select_timezone(hass)
 
     start_local = _localize_date(start_date, timezone)
+
     # ``end_date`` reste inclusif comme dans le tableau de bord Énergie ;
     # recorder se charge ensuite de convertir ce point de sortie en borne exclusive.
     end_local = _localize_date(end_date, timezone)
     end_local_exclusive = end_local + timedelta(days=1)
 
+
     start_utc = dt_util.as_utc(start_local)
     end_utc = dt_util.as_utc(end_local)
     display_end = end_local_exclusive - timedelta(seconds=1)
+
 
     return (
         start_utc,
@@ -659,6 +679,7 @@ def _resolve_period(
         display_end,
         _select_bucket(period, start_local, end_local_exclusive),
     )
+
 
 
 def _coerce_service_date(value: Any, field: str) -> date | None:
@@ -727,6 +748,7 @@ def _localize_date(day: date, timezone: tzinfo) -> datetime:
     if callable(localize):  # pytz support
         return localize(naive)
     return naive.replace(tzinfo=timezone)
+
 
 
 def _build_metrics(preferences: "EnergyPreferences" | dict[str, Any]) -> list[MetricDefinition]:
@@ -833,6 +855,7 @@ async def _collect_statistics(
         else:
             raise
 
+
     stats_map = await instance.async_add_executor_job(
         recorder_statistics.statistics_during_period,
         hass,
@@ -896,10 +919,12 @@ def _calculate_totals(
         if not rows:
             continue
 
+
         change_total = 0.0
         has_change = False
 
         for row in rows:
+
             change_value = row.get("change")
             if change_value is None:
                 continue
@@ -908,6 +933,7 @@ def _calculate_totals(
 
         if has_change:
             totals[statistic_id] = change_total
+
 
     return totals
 
@@ -924,7 +950,9 @@ def _build_pdf(
     filename_pattern: str,
     generated_at: datetime,
     dashboard_label: str | None,
+
     period: str,
+
 ) -> str:
     """Assembler le PDF et le sauvegarder sur disque."""
 

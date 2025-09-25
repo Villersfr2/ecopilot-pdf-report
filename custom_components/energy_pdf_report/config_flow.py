@@ -8,7 +8,9 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
+
 from homeassistant.helpers import config_validation as cv
+
 
 from .const import (
     CONF_FILENAME_PATTERN,
@@ -90,7 +92,9 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
+
         """Gérer l'étape initiale du flux d'options."""
+
 
         options = self.config_entry.options
 

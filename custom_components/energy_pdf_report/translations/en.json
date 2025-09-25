@@ -16,8 +16,10 @@
   "options": {
     "step": {
       "init": {
+
         "title": "Energy PDF Report options",
         "description": "Configure the default output directory, reporting period and filename pattern used when generating PDFs."
+
       }
     }
   }
