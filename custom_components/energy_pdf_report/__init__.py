@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import calendar
+
 import inspect
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, tzinfo
+
 from pathlib import Path
 from typing import Any, Iterable, TYPE_CHECKING
 
@@ -73,6 +75,7 @@ class MetricDefinition:
 
     category: str
     statistic_id: str
+
 
 
 @dataclass(slots=True)
@@ -176,6 +179,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
     manager = await async_get_manager(hass)
 
+
     dashboard_requested: str | None = call.data.get(CONF_DASHBOARD)
     selection = await _async_select_dashboard_preferences(
         hass, manager, dashboard_requested
@@ -184,6 +188,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
     start, end, display_start, display_end, bucket = _resolve_period(hass, call.data)
     metrics = _build_metrics(preferences)
+
 
     if not metrics:
         raise HomeAssistantError(
@@ -247,6 +252,7 @@ async def _async_select_dashboard_preferences(
     """Sélectionner les préférences énergie pour le tableau demandé."""
 
     dashboards = _collect_dashboard_preferences(manager)
+
 
     if requested_dashboard:
         normalized = _normalize_dashboard_key(requested_dashboard)
@@ -516,6 +522,7 @@ async def _async_fetch_dashboard_preferences_via_methods(
 
             result = await _await_if_needed(result)
 
+
             selections = _extract_named_preferences(result, dashboard_id)
             if selections:
                 requested = _normalize_dashboard_key(dashboard_id)
@@ -561,6 +568,19 @@ def _format_dashboard_label(selection: DashboardSelection) -> str | None:
     return name or identifier
 
 
+            selections = _extract_named_preferences(result, dashboard_id)
+            if selections:
+                requested = _normalize_dashboard_key(dashboard_id)
+                if requested:
+                    for selection in selections:
+                        if _match_dashboard_key(selection, requested):
+                            if selection.identifier is None:
+                                return DashboardSelection(
+                                    dashboard_id, selection.name, selection.preferences
+                                )
+                            return selection
+
+
 def _resolve_period(
     hass: HomeAssistant, call_data: dict[str, Any]
 ) -> tuple[datetime, datetime, datetime, datetime, str]:
@@ -599,14 +619,17 @@ def _resolve_period(
     timezone = _select_timezone(hass)
 
     start_local = _localize_date(start_date, timezone)
+
     # ``end_date`` reste inclusif comme dans le tableau de bord Énergie ;
     # recorder se charge ensuite de convertir ce point de sortie en borne exclusive.
     end_local = _localize_date(end_date, timezone)
     end_local_exclusive = end_local + timedelta(days=1)
 
+
     start_utc = dt_util.as_utc(start_local)
     end_utc = dt_util.as_utc(end_local)
     display_end = end_local_exclusive - timedelta(seconds=1)
+
 
     return (
         start_utc,
@@ -615,6 +638,7 @@ def _resolve_period(
         display_end,
         _select_bucket(period, start_local, end_local_exclusive),
     )
+
 
 
 def _coerce_service_date(value: Any, field: str) -> date | None:
@@ -683,6 +707,7 @@ def _localize_date(day: date, timezone: tzinfo) -> datetime:
     if callable(localize):  # pytz support
         return localize(naive)
     return naive.replace(tzinfo=timezone)
+
 
 
 def _build_metrics(preferences: "EnergyPreferences" | dict[str, Any]) -> list[MetricDefinition]:
@@ -789,6 +814,7 @@ async def _collect_statistics(
         else:
             raise
 
+
     stats_map = await instance.async_add_executor_job(
         recorder_statistics.statistics_during_period,
         hass,
@@ -852,10 +878,12 @@ def _calculate_totals(
         if not rows:
             continue
 
+
         change_total = 0.0
         has_change = False
 
         for row in rows:
+
             change_value = row.get("change")
             if change_value is None:
                 continue
@@ -864,6 +892,7 @@ def _calculate_totals(
 
         if has_change:
             totals[statistic_id] = change_total
+
 
     return totals
 

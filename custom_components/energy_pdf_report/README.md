@@ -17,7 +17,9 @@ Ce composant personnalisé Home Assistant ajoute un service `energy_pdf_report.g
 - `output_dir` *(optionnel)* : répertoire de sortie relatif au dossier de configuration ou chemin absolu. Par défaut `www/energy_reports`.
 - `dashboard` *(optionnel)* : identifiant ou nom du tableau de bord Énergie à analyser. Si omis, le tableau actif par défaut est utilisé.
 
+
 Le fichier généré est également signalé via une notification persistante dans Home Assistant, qui mentionne le tableau de bord utilisé lorsque ce paramètre est précisé.
+
 
 > ℹ️ Le nombre de statistiques indiqué dans le rapport correspond simplement aux identifiants uniques présents dans vos préférences du tableau de bord Énergie. L'intégration n'impose aucune limite : toutes les statistiques disponibles sont prises en compte.
 
