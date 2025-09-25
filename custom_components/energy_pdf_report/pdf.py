@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import zlib
+from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -14,7 +15,6 @@ from fpdf import FPDF
 
 try:  # pragma: no cover - matplotlib est optionnel durant les tests
     import matplotlib
-
 
 FONT_FAMILY = "DejaVuSans"
 _FONT_FILES: dict[str, str] = {
@@ -127,6 +127,7 @@ class EnergyReportPDF(FPDF):
         self._suppress_footer = False
         self.set_margins(15, 22, 15)
 
+
     def header(self) -> None:  # pragma: no cover - géré par fpdf
         if self._suppress_header:
             return
@@ -154,6 +155,7 @@ class EnergyReportPDF(FPDF):
         self.cell(0, 5, f"Page {self.page_no()} sur {{nb}}", align="L")
         self.cell(0, 5, f"Généré le {self.generated_at.strftime('%d/%m/%Y %H:%M')}", align="R")
         self.set_text_color(*TEXT_COLOR)
+
 
 
 class EnergyPDFBuilder:
@@ -455,12 +457,13 @@ class EnergyPDFBuilder:
         self._pdf.set_text_color(*self._default_text_color)
 
     def output(self, path: str) -> None:
-        """Sauvegarder le PDF."""
 
-        try:
+        """Sauvegarder le PDF en garantissant le nettoyage des ressources."""
+
+        with ExitStack() as stack:
+            stack.callback(self._cleanup_resources)
             self._pdf.output(path)
-        finally:
-            self._cleanup_resources()
+
 
     def _cleanup_resources(self) -> None:
         """Nettoyer les répertoires temporaires."""
