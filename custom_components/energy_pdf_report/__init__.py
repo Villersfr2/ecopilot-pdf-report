@@ -535,6 +535,7 @@ async def _async_fetch_dashboard_preferences_via_methods(
                                 )
                             return selection
 
+
                 primary = selections[0]
                 if primary.identifier is None:
                     return DashboardSelection(dashboard_id, primary.name, primary.preferences)
@@ -544,6 +545,7 @@ async def _async_fetch_dashboard_preferences_via_methods(
                 return DashboardSelection(dashboard_id, None, result)
 
     return None
+
 
 
 async def _await_if_needed(result: Any) -> Any:
@@ -615,7 +617,15 @@ def _resolve_period(
     end_utc = dt_util.as_utc(end_local_exclusive)
     display_end = end_local_exclusive - timedelta(seconds=1)
 
-    return start_utc, end_utc, start_local, display_end, bucket
+
+    return (
+        start_utc,
+        end_utc,
+        start_local,
+        display_end,
+        _select_bucket(period, start_local, end_local_exclusive),
+    )
+
 
 
 def _coerce_service_date(value: Any, field: str) -> date | None:
@@ -685,48 +695,6 @@ def _localize_date(day: date, timezone: tzinfo) -> datetime:
         return localize(naive)
     return naive.replace(tzinfo=timezone)
 
-
-def _coerce_service_date(value: Any, field: str) -> date | None:
-    """Convertir une valeur issue du service en date."""
-
-    if value is None:
-        return None
-
-    if isinstance(value, datetime):
-        return value.date()
-
-    if isinstance(value, date):
-        return value
-
-    if isinstance(value, str):
-        parsed = dt_util.parse_date(value)
-        if parsed is not None:
-            return parsed
-
-    raise HomeAssistantError(
-        f"Impossible d'interpréter {field} comme une date valide (format attendu YYYY-MM-DD)."
-    )
-
-
-def _select_timezone(hass: HomeAssistant) -> tzinfo:
-    """Déterminer le fuseau horaire à utiliser pour les conversions locales."""
-
-    if hass.config.time_zone:
-        timezone = dt_util.get_time_zone(hass.config.time_zone)
-        if timezone is not None:
-            return timezone
-
-    return dt_util.DEFAULT_TIME_ZONE
-
-
-def _localize_date(day: date, timezone: tzinfo) -> datetime:
-    """Assembler une date locale en tenant compte des transitions horaires."""
-
-    naive = datetime.combine(day, time.min)
-    localize = getattr(timezone, "localize", None)
-    if callable(localize):  # pytz support
-        return localize(naive)
-    return naive.replace(tzinfo=timezone)
 
 
 def _build_metrics(preferences: "EnergyPreferences" | dict[str, Any]) -> list[MetricDefinition]:
