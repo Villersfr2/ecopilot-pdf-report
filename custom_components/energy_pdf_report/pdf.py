@@ -45,7 +45,6 @@ class _TemporaryFontCache:
         self._tempdir.cleanup()
 
 
-
 def _register_unicode_fonts(pdf: FPDF) -> _TemporaryFontCache | None:
     """Enregistrer les polices Unicode sur le PDF et retourner le cache."""
 

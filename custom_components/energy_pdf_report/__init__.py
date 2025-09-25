@@ -274,6 +274,7 @@ async def _async_select_dashboard_preferences(
     if dashboards:
         return _pick_default_dashboard(manager, dashboards)
 
+
     data = getattr(manager, "data", None)
     if _is_energy_preferences(data):
         return DashboardSelection(None, None, data)
@@ -540,7 +541,6 @@ async def _async_fetch_dashboard_preferences_via_methods(
 
             if _is_energy_preferences(result):
                 return DashboardSelection(dashboard_id, None, result)
-
 
     return None
 
@@ -824,15 +824,61 @@ def _calculate_totals(
     totals: dict[str, float] = {metric.statistic_id: 0.0 for metric in metrics}
 
     for statistic_id, rows in stats.items():
-        total = 0.0
-        for row in rows:
-            value = row.get("change")
-            if value is None:
-                value = row.get("sum")
-            if value is None:
+        if not rows:
+            continue
+
+        # Ordonner les entrées pour pouvoir comparer les premiers et derniers points.
+        ordered_rows = sorted(
+            rows,
+            key=lambda row: row.get("start") or row.get("end"),
+        )
+
+        # Lorsque le champ ``change`` est disponible, il représente déjà la
+        # variation sur l'intervalle considéré. Nous pouvons donc le sommer.
+        change_total = 0.0
+        has_change = False
+        for row in ordered_rows:
+            change_value = row.get("change")
+            if change_value is None:
                 continue
-            total += float(value)
-        totals[statistic_id] = total
+            has_change = True
+            change_total += float(change_value)
+
+        if has_change:
+            totals[statistic_id] = change_total
+            continue
+
+        def _difference_from_progression(values: list[float]) -> float | None:
+            """Retourner la variation cumulée à partir d'une série de valeurs."""
+
+            if not values:
+                return None
+
+            if len(values) == 1:
+                # Une seule mesure disponible : elle correspond au total pour
+                # la période demandée.
+                return values[0]
+
+            return values[-1] - values[0]
+
+        sum_progression = _difference_from_progression(
+            [float(row["sum"]) for row in ordered_rows if row.get("sum") is not None]
+        )
+
+        if sum_progression is not None:
+            totals[statistic_id] = sum_progression
+            continue
+
+        state_progression = _difference_from_progression(
+            [
+                float(row["state"])
+                for row in ordered_rows
+                if row.get("state") is not None
+            ]
+        )
+
+        if state_progression is not None:
+            totals[statistic_id] = state_progression
 
     return totals
 
@@ -878,8 +924,8 @@ def _build_pdf(
         f"Rapport généré le : {generated_at.strftime('%d/%m/%Y %H:%M')}"
     )
     builder.add_paragraph(
-        "Les totaux correspondent à la somme des données issues du tableau de bord"
-        " énergie pour la période sélectionnée."
+        "Les totaux représentent la variation relevée dans le tableau de bord"
+        " énergie sur la période sélectionnée."
     )
     builder.add_paragraph(
         "Les valeurs négatives indiquent un flux exporté ou une compensation."
