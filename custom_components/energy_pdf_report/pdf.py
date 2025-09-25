@@ -163,13 +163,11 @@ class EnergyReportPDF(FPDF):
 class EnergyPDFBuilder:
     """Constructeur simplifié de rapports PDF professionnels."""
 
-
     def __init__(
         self,
         title: str,
         period_label: str,
         generated_at: datetime,
-
         logo_path: Optional[Union[str, Path]] = None,
 
     ) -> None:
@@ -578,59 +576,6 @@ def _format_number(value: float) -> str:
         formatted = f"{value:,.2f}"
     return formatted.replace(",", " ")
 
-
-    def _validate_logo(self, logo_path: Optional[Union[str, Path]]) -> Optional[Path]:
-
-        if not logo_path:
-            return None
-        path = Path(logo_path)
-        if path.exists() and path.is_file():
-            return path
-        return None
-
-
-def _decorate_category(label: str) -> str:
-    """Ajouter une icône appropriée devant une catégorie si disponible."""
-
-    normalized = label.strip()
-    lowered = normalized.lower()
-    for keyword, icon in _CATEGORY_ICON_HINTS:
-        if keyword in lowered and not normalized.startswith(icon):
-            return f"{icon} {normalized}"
-    return normalized
-
-
-def _get_category_color(label: str) -> Tuple[int, int, int]:
-
-    """Choisir une couleur fixe en fonction de la catégorie."""
-
-    lowered = label.lower()
-    for keyword, color in _CATEGORY_COLORS:
-        if keyword in lowered:
-            return color
-    return PRIMARY_COLOR
-
-
-
-def _format_measure(value: float, unit: Optional[str]) -> str:
-
-    """Formater une valeur numérique avec unité."""
-
-    formatted = _format_number(value)
-    return f"{formatted} {unit}".strip() if unit else formatted
-
-
-def _format_number(value: float) -> str:
-    """Formater un nombre pour l'affichage dans le PDF."""
-
-    magnitude = abs(value)
-    if magnitude >= 1000:
-        formatted = f"{value:,.0f}"
-    elif magnitude >= 100:
-        formatted = f"{value:,.1f}"
-    else:
-        formatted = f"{value:,.2f}"
-    return formatted.replace(",", " ")
 
 
 

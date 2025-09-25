@@ -126,7 +126,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Configurer une entrée de configuration."""
 
     domain_data = hass.data.setdefault(DOMAIN, {})
-    domain_data[entry.entry_id] = dict(entry.data)
+
+    domain_data[entry.entry_id] = entry.data
+
 
     _async_register_services(hass)
 
@@ -1125,6 +1127,7 @@ def _build_pdf(
 
     builder.add_paragraph(
         "Pour approfondir l'évolution temporelle et comparer les périodes,"
+
         " référez-vous au tableau de bord Énergie de EcoPilot."
 
     )

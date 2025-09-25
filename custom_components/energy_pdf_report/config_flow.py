@@ -25,7 +25,7 @@ from .const import (
 
 
 class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Gérer le flux de configuration."""
+    """Config flow for Energy PDF Report."""
 
     VERSION = 1
 
@@ -131,9 +131,7 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
         )
 
 
-async def async_get_options_flow(
-    config_entry: config_entries.ConfigEntry,
-) -> EnergyPDFReportOptionsFlowHandler:
-    """Obtenir le gestionnaire du flux d'options."""
+async def async_get_options_flow(config_entry: config_entries.ConfigEntry):
+    """Return the options flow handler for this config entry."""
 
     return EnergyPDFReportOptionsFlowHandler(config_entry)
