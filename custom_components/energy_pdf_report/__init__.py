@@ -129,7 +129,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     domain_data = hass.data.setdefault(DOMAIN, {})
 
-    domain_data[entry.entry_id] = entry.data
+    domain_data[entry.entry_id] = entry
+
+    entry.async_on_unload(entry.add_update_listener(update_listener))
 
 
     _async_register_services(hass)
@@ -175,6 +177,14 @@ def _async_register_services(hass: HomeAssistant) -> None:
     )
 
 
+
+async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Recharger l'intégration lorsque les options sont mises à jour."""
+
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
+
 _ALLOWED_OPTION_KEYS: tuple[str, ...] = (
     CONF_OUTPUT_DIR,
     CONF_FILENAME_PATTERN,
@@ -215,8 +225,10 @@ def _active_entry_ids(domain_data: dict[str, Any]) -> set[str]:
 
     return {
         key
-        for key in domain_data
-        if key != DATA_SERVICES_REGISTERED and isinstance(domain_data[key], dict)
+
+        for key, value in domain_data.items()
+        if key != DATA_SERVICES_REGISTERED and isinstance(value, ConfigEntry)
+
     }
 
 

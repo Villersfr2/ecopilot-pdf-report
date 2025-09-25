@@ -34,7 +34,6 @@ CHART_BACKGROUND = (245, 249, 253)
 BAR_TRACK_COLOR = (226, 235, 243)
 BAR_BORDER_COLOR = (202, 214, 223)
 
-
 _CATEGORY_COLORS: Tuple[Tuple[str, Tuple[int, int, int]], ...] = (
 
     ("solaire", (241, 196, 15)),
@@ -102,7 +101,6 @@ def _register_unicode_fonts(pdf: FPDF) -> Optional[_TemporaryFontCache]:
         pdf.add_font(FONT_FAMILY, style, str(cache.directory / filename), uni=True)
 
     return cache
-
 
 
 @dataclass
