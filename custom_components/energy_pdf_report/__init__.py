@@ -253,6 +253,7 @@ async def _async_select_dashboard_preferences(
 
     dashboards = _collect_dashboard_preferences(manager)
 
+
     if requested_dashboard:
         normalized = _normalize_dashboard_key(requested_dashboard)
 
@@ -273,7 +274,6 @@ async def _async_select_dashboard_preferences(
 
     if dashboards:
         return _pick_default_dashboard(manager, dashboards)
-
 
     data = getattr(manager, "data", None)
     if _is_energy_preferences(data):
@@ -522,6 +522,7 @@ async def _async_fetch_dashboard_preferences_via_methods(
 
             result = await _await_if_needed(result)
 
+
             selections = _extract_named_preferences(result, dashboard_id)
             if selections:
                 requested = _normalize_dashboard_key(dashboard_id)
@@ -609,11 +610,80 @@ def _resolve_period(
     # on travaille avec une fin exclusive (lendemain à 00:00)
     end_local_exclusive = _localize_date(end_date + timedelta(days=1), timezone)
 
+
     start_utc = dt_util.as_utc(start_local)
     end_utc = dt_util.as_utc(end_local_exclusive)
     display_end = end_local_exclusive - timedelta(seconds=1)
 
-    return start_utc, end_utc, start_local, display_end, period
+    return start_utc, end_utc, start_local, display_end, bucket
+
+
+def _coerce_service_date(value: Any, field: str) -> date | None:
+    """Convertir une valeur issue du service en date."""
+
+    if value is None:
+        return None
+
+    if isinstance(value, datetime):
+        return value.date()
+
+    if isinstance(value, date):
+        return value
+
+    if isinstance(value, str):
+        parsed = dt_util.parse_date(value)
+        if parsed is not None:
+            return parsed
+
+    raise HomeAssistantError(
+        f"Impossible d'interpréter {field} comme une date valide (format attendu YYYY-MM-DD)."
+    )
+
+
+def _select_timezone(hass: HomeAssistant) -> tzinfo:
+    """Déterminer le fuseau horaire à utiliser pour les conversions locales."""
+
+    if hass.config.time_zone:
+        timezone = dt_util.get_time_zone(hass.config.time_zone)
+        if timezone is not None:
+            return timezone
+
+    return dt_util.DEFAULT_TIME_ZONE
+
+
+def _select_bucket(period: str, start_local: datetime, end_local_exclusive: datetime) -> str:
+    """Choisir une granularité compatible avec recorder pour la période demandée."""
+
+    normalized = period.lower() if isinstance(period, str) else ""
+
+    if normalized == "day":
+        return "hour"
+
+    if normalized == "week":
+        return "day"
+
+    if normalized == "month":
+        return "day"
+
+    span = end_local_exclusive - start_local
+
+    if span <= timedelta(days=2):
+        return "hour"
+
+    if span <= timedelta(days=35):
+        return "day"
+
+    return "month"
+
+
+def _localize_date(day: date, timezone: tzinfo) -> datetime:
+    """Assembler une date locale en tenant compte des transitions horaires."""
+
+    naive = datetime.combine(day, time.min)
+    localize = getattr(timezone, "localize", None)
+    if callable(localize):  # pytz support
+        return localize(naive)
+    return naive.replace(tzinfo=timezone)
 
 
 def _coerce_service_date(value: Any, field: str) -> date | None:
