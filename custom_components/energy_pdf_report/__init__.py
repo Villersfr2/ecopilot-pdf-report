@@ -45,7 +45,7 @@ from .const import (
     SERVICE_GENERATE_REPORT,
     VALID_PERIODS,
 )
-from .pdf import EnergyPDFBuilder, TableConfig
+from .pdf import EnergyPDFBuilder, TableConfig, _decorate_category
 
 if TYPE_CHECKING:
     from homeassistant.components.energy.data import EnergyPreferences
@@ -938,6 +938,25 @@ def _calculate_totals(
     return totals
 
 
+def _discover_logo_candidate(output_dir: Path) -> Path | None:
+    """Rechercher un logo optionnel à intégrer dans la page de garde."""
+
+    candidates: list[Path] = []
+    search_dirs = {output_dir, Path(__file__).resolve().parent}
+
+    parent = output_dir.parent
+    if parent != output_dir:
+        search_dirs.add(parent)
+
+    for directory in search_dirs:
+        for filename in ("logo.png", "logo.jpg", "logo.jpeg"):
+            candidate = directory / filename
+            if candidate.exists():
+                candidates.append(candidate)
+
+    return candidates[0] if candidates else None
+
+
 def _build_pdf(
     metrics: list[MetricDefinition],
     totals: dict[str, float],
@@ -992,47 +1011,65 @@ def _build_pdf(
 
     file_path = output_dir / filename
 
-    builder = EnergyPDFBuilder(PDF_TITLE)
-    if dashboard_label:
-        builder.add_paragraph(f"Tableau d'énergie : {dashboard_label}", bold=True)
-    builder.add_paragraph(
-        (
-            "Période analysée : "
-            f"{display_start.strftime('%d/%m/%Y')} → {display_end.strftime('%d/%m/%Y')}"
-        ),
-        bold=True,
-    )
-    builder.add_paragraph(f"Granularité des statistiques : {bucket}")
-    builder.add_paragraph(
-        f"Rapport généré le : {generated_at.strftime('%d/%m/%Y %H:%M')}"
-    )
-    builder.add_paragraph(
-        "Les totaux représentent la variation relevée dans le tableau de bord"
-        " énergie sur la période sélectionnée."
-    )
-    builder.add_paragraph(
-        "Les valeurs négatives indiquent un flux exporté ou une compensation."
-    )
-    builder.add_paragraph(
-        (
-            "Statistiques incluses selon la configuration du tableau de bord énergie : "
-            f"{len(metrics)}"
-        )
+    period_label = f"{display_start.strftime('%d/%m/%Y')} → {display_end.strftime('%d/%m/%Y')}"
+    logo_path = _discover_logo_candidate(output_dir)
+    builder = EnergyPDFBuilder(
+        PDF_TITLE,
+        period_label=period_label,
+        generated_at=generated_at,
+        logo_path=logo_path,
     )
 
-    summary_rows = _prepare_summary_rows(metrics, totals, metadata)
-    summary_widths = builder.compute_column_widths((0.6, 0.25, 0.15))
+    cover_details = [
+        f"Période : {period_label}",
+        f"Granularité des statistiques : {bucket}",
+        f"Statistiques incluses : {len(metrics)}",
+        f"Rapport généré le : {generated_at.strftime('%d/%m/%Y %H:%M')}",
+    ]
+    if dashboard_label:
+        cover_details.insert(1, f"Tableau d'énergie : {dashboard_label}")
+
+    builder.add_cover_page(
+        subtitle=(
+            f"Rapport énergie du {display_start.strftime('%d/%m/%Y')} "
+            f"au {display_end.strftime('%d/%m/%Y')}"
+        ),
+        details=cover_details,
+    )
+
+    builder.add_section_title("Synthèse globale")
+    builder.add_paragraph(
+        "Cette section présente les totaux consolidés sur la période analysée."
+    )
+
+    summary_rows, summary_series = _prepare_summary_rows(metrics, totals, metadata)
+    summary_widths = builder.compute_column_widths((0.55, 0.27, 0.18))
     builder.add_table(
         TableConfig(
             title="Synthèse par catégorie",
             headers=("Catégorie", "Total", "Unité"),
             rows=summary_rows,
             column_widths=summary_widths,
+            emphasize_rows=list(range(len(summary_rows))),
         )
     )
 
+    builder.add_paragraph(
+        "Les totaux correspondent à la variation mesurée dans le tableau de bord"
+        " énergie sur la période sélectionnée."
+    )
+    builder.add_paragraph(
+        "Les valeurs négatives indiquent un flux exporté ou une compensation."
+    )
+
+    builder.add_section_title("Détail par catégorie / source")
+    builder.add_paragraph(
+        "Chaque statistique suivie est listée avec sa contribution précise afin de"
+        " faciliter l'analyse fine par origine ou type de consommation."
+    )
+
     detail_rows = _prepare_detail_rows(metrics, totals, metadata)
-    detail_widths = builder.compute_column_widths((0.26, 0.45, 0.17, 0.12))
+    detail_widths = builder.compute_column_widths((0.26, 0.44, 0.18, 0.12))
     builder.add_table(
         TableConfig(
             title="Détail des statistiques",
@@ -1040,6 +1077,20 @@ def _build_pdf(
             rows=detail_rows,
             column_widths=detail_widths,
         )
+    )
+
+    if summary_series:
+        builder.add_paragraph(
+            "La visualisation suivante met en avant la répartition des flux"
+            " pour chaque catégorie suivie."
+        )
+        builder.add_chart("Répartition par catégorie", summary_series)
+
+    builder.add_section_title("Historique / Évolution")
+    builder.add_paragraph(
+        "Les données historiques détaillées ne sont pas fournies par cette"
+        " intégration. Utilisez le tableau de bord Énergie pour explorer"
+        " l'évolution temporelle précise."
     )
 
     builder.add_footer(f"Chemin du fichier : {file_path}")
@@ -1052,8 +1103,8 @@ def _prepare_summary_rows(
     metrics: Iterable[MetricDefinition],
     totals: dict[str, float],
     metadata: dict[str, tuple[int, StatisticMetaData]],
-) -> list[tuple[str, str, str]]:
-    """Préparer les lignes du tableau de synthèse."""
+) -> tuple[list[tuple[str, str, str]], list[tuple[str, float, str]]]:
+    """Préparer les lignes du tableau de synthèse et la série pour les graphiques."""
 
     summary: dict[tuple[str, str], float] = defaultdict(float)
 
@@ -1066,14 +1117,17 @@ def _prepare_summary_rows(
         summary[key] += total
 
     rows: list[tuple[str, str, str]] = []
+    series: list[tuple[str, float, str]] = []
     for (category, unit), value in sorted(
         summary.items(), key=lambda item: (-abs(item[1]), item[0])
     ):
         if abs(value) < 1e-6:
             continue
-        rows.append((category, _format_number(value), unit))
+        decorated = _decorate_category(category)
+        rows.append((decorated, _format_number(value), unit))
+        series.append((decorated, value, unit))
 
-    return rows
+    return rows, series
 
 
 def _prepare_detail_rows(
