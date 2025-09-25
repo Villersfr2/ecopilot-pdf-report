@@ -16,7 +16,10 @@
   "options": {
     "step": {
       "init": {
-        "description": "Aucune option supplémentaire n'est disponible pour le moment."
+
+        "title": "Options du rapport PDF énergie",
+        "description": "Définissez le répertoire de sortie, la période par défaut et le modèle de nom de fichier utilisés lors de la génération des PDF."
+
       }
     }
   }

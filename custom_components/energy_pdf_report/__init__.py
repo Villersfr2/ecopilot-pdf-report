@@ -31,11 +31,19 @@ from homeassistant.util import dt as dt_util
 from homeassistant.components.energy.data import async_get_manager
 
 from .const import (
+    CONF_DASHBOARD,
+    CONF_END_DATE,
+    CONF_FILENAME_PATTERN,
+    CONF_OUTPUT_DIR,
+    CONF_PERIOD,
+    CONF_START_DATE,
+    DEFAULT_FILENAME_PATTERN,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_PERIOD,
     DOMAIN,
     PDF_TITLE,
     SERVICE_GENERATE_REPORT,
+    VALID_PERIODS,
 )
 from .pdf import EnergyPDFBuilder, TableConfig
 
@@ -46,21 +54,16 @@ _LOGGER = logging.getLogger(__name__)
 
 _RECORDER_METADATA_REQUIRES_HASS: bool | None = None
 
-CONF_START_DATE = "start_date"
-CONF_END_DATE = "end_date"
-CONF_PERIOD = "period"
-CONF_OUTPUT_DIR = "output_dir"
-CONF_DASHBOARD = "dashboard"
-
-VALID_PERIODS: tuple[str, ...] = ("day", "week", "month")
 
 SERVICE_GENERATE_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_START_DATE): cv.date,
         vol.Optional(CONF_END_DATE): cv.date,
-        vol.Optional(CONF_PERIOD, default=DEFAULT_PERIOD): vol.In(VALID_PERIODS),
+        vol.Optional(CONF_PERIOD): vol.In(VALID_PERIODS),
         vol.Optional(CONF_FILENAME): cv.string,
-        vol.Optional(CONF_OUTPUT_DIR, default=DEFAULT_OUTPUT_DIR): cv.string,
+
+        vol.Optional(CONF_OUTPUT_DIR): cv.string,
+
         vol.Optional(CONF_DASHBOARD): cv.string,
     }
 )
@@ -173,6 +176,28 @@ def _async_register_services(hass: HomeAssistant) -> None:
     )
 
 
+def _get_config_entry_options(hass: HomeAssistant) -> dict[str, Any]:
+    """Fusionner les options configurées sur les entrées actives."""
+
+    entries = hass.config_entries.async_entries(DOMAIN)
+    if not entries:
+        return {}
+
+    domain_data = hass.data.get(DOMAIN) or {}
+    entry_ids = domain_data.get(DATA_CONFIG_ENTRY_IDS)
+
+    options: dict[str, Any] = {}
+
+    if isinstance(entry_ids, set) and entry_ids:
+        for entry in entries:
+            if entry.entry_id in entry_ids:
+                options.update(entry.options or {})
+    else:
+        options.update(entries[0].options or {})
+
+    return options
+
+
 async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None:
     """Exécuter la génération d'un rapport PDF."""
 
@@ -185,7 +210,22 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     )
     preferences = selection.preferences
 
-    start, end, display_start, display_end, bucket = _resolve_period(hass, call.data)
+
+    options = _get_config_entry_options(hass)
+    call_data = dict(call.data)
+
+    default_period = options.get(CONF_PERIOD, DEFAULT_PERIOD)
+    if CONF_PERIOD not in call_data:
+        call_data[CONF_PERIOD] = default_period
+
+    period_value = call_data.get(CONF_PERIOD, default_period)
+    if period_value not in VALID_PERIODS:
+        period_value = DEFAULT_PERIOD
+
+    period = str(period_value)
+    call_data[CONF_PERIOD] = period
+
+    start, end, display_start, display_end, bucket = _resolve_period(hass, call_data)
     metrics = _build_metrics(preferences)
 
 
@@ -197,12 +237,19 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     stats_map, metadata = await _collect_statistics(hass, metrics, start, end, bucket)
     totals = _calculate_totals(metrics, stats_map)
 
-    output_dir_input = call.data.get(CONF_OUTPUT_DIR, DEFAULT_OUTPUT_DIR)
+    output_dir_input = call.data.get(
+        CONF_OUTPUT_DIR, options.get(CONF_OUTPUT_DIR, DEFAULT_OUTPUT_DIR)
+    )
     output_dir = Path(output_dir_input)
     if not output_dir.is_absolute():
         output_dir = Path(hass.config.path(output_dir_input))
 
     filename: str | None = call.data.get(CONF_FILENAME)
+    filename_pattern: str = options.get(
+        CONF_FILENAME_PATTERN, DEFAULT_FILENAME_PATTERN
+    )
+    if not isinstance(filename_pattern, str) or not filename_pattern.strip():
+        filename_pattern = DEFAULT_FILENAME_PATTERN
     generated_at = dt_util.now()
 
     dashboard_label = _format_dashboard_label(selection)
@@ -217,8 +264,12 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
         bucket,
         output_dir,
         filename,
+        filename_pattern,
         generated_at,
         dashboard_label,
+
+        period,
+
     )
 
     message_lines = [
@@ -479,11 +530,13 @@ def _pick_default_dashboard(
             if selection:
                 return selection
 
+
     for attr in ("selected_dashboard", "default_dashboard", "active_dashboard"):
         if hasattr(manager, attr):
             selection = _find_match(getattr(manager, attr))
             if selection:
                 return selection
+
 
     return dashboards[0]
 
@@ -522,7 +575,6 @@ async def _async_fetch_dashboard_preferences_via_methods(
 
             result = await _await_if_needed(result)
 
-
             selections = _extract_named_preferences(result, dashboard_id)
             if selections:
                 requested = _normalize_dashboard_key(dashboard_id)
@@ -535,7 +587,6 @@ async def _async_fetch_dashboard_preferences_via_methods(
                                 )
                             return selection
 
-
                 primary = selections[0]
                 if primary.identifier is None:
                     return DashboardSelection(dashboard_id, primary.name, primary.preferences)
@@ -545,6 +596,7 @@ async def _async_fetch_dashboard_preferences_via_methods(
                 return DashboardSelection(dashboard_id, None, result)
 
     return None
+
 
 
 async def _await_if_needed(result: Any) -> Any:
@@ -895,19 +947,47 @@ def _build_pdf(
     bucket: str,
     output_dir: Path,
     filename: str | None,
+    filename_pattern: str,
     generated_at: datetime,
     dashboard_label: str | None,
+
+    period: str,
+
 ) -> str:
     """Assembler le PDF et le sauvegarder sur disque."""
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    if filename:
+        filename = filename.strip()
+        if not filename:
+            filename = None
+
     if not filename:
-        filename = (
-            f"energy_report_{display_start.date().isoformat()}_"
-            f"{display_end.date().isoformat()}.pdf"
-        )
+        context = {
+            "start": display_start.date().isoformat(),
+            "end": display_end.date().isoformat(),
+            "period": period,
+        }
+
+        try:
+            filename = filename_pattern.format(**context)
+        except KeyError as err:
+            raise HomeAssistantError(
+                "Le modèle de nom de fichier contient un espace réservé inconnu: "
+                f"{err.args[0]}"
+            ) from err
+
+        filename = filename.strip()
+
+        if not filename:
+            raise HomeAssistantError(
+                "Le modèle de nom de fichier a généré un nom vide."
+            )
     elif not filename.lower().endswith(".pdf"):
+        filename = f"{filename}.pdf"
+
+    if not filename.lower().endswith(".pdf"):
         filename = f"{filename}.pdf"
 
     file_path = output_dir / filename

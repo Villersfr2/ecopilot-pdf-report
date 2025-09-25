@@ -12,15 +12,27 @@ Ce composant personnalisé Home Assistant ajoute un service `energy_pdf_report.g
 ## Paramètres du service
 - `start_date` *(optionnel)* : date locale de début (format `YYYY-MM-DD`). Par défaut la période courante (jour, semaine ou mois) est utilisée. Les valeurs provenant d'objets `date`, `datetime` ou de chaînes de caractères sont automatiquement converties.
 - `end_date` *(optionnel)* : date locale de fin (format `YYYY-MM-DD`). Si omis, la fin est déduite de la granularité. Les objets `datetime` sont convertis en date avant le traitement.
-- `period` *(optionnel)* : granularité des statistiques (`day`, `week` ou `month`).
-- `filename` *(optionnel)* : nom du fichier PDF à générer (l'extension `.pdf` est ajoutée automatiquement si nécessaire).
-- `output_dir` *(optionnel)* : répertoire de sortie relatif au dossier de configuration ou chemin absolu. Par défaut `www/energy_reports`.
+
+- `period` *(optionnel)* : granularité des statistiques (`day`, `week` ou `month`). Si omis, la valeur définie dans les options de l'intégration est appliquée (par défaut `day`).
+- `filename` *(optionnel)* : nom du fichier PDF à générer (l'extension `.pdf` est ajoutée automatiquement si nécessaire). Si omis, le modèle défini dans les options de l'intégration est utilisé.
+- `output_dir` *(optionnel)* : répertoire de sortie relatif au dossier de configuration ou chemin absolu. Par défaut, celui défini dans les options de l'intégration (initialement `www/energy_reports`).
+
 - `dashboard` *(optionnel)* : identifiant ou nom du tableau de bord Énergie à analyser. Si omis, le tableau actif par défaut est utilisé.
 
 Le fichier généré est également signalé via une notification persistante dans Home Assistant, qui mentionne le tableau de bord utilisé lorsque ce paramètre est précisé.
 
-
 > ℹ️ Le nombre de statistiques indiqué dans le rapport correspond simplement aux identifiants uniques présents dans vos préférences du tableau de bord Énergie. L'intégration n'impose aucune limite : toutes les statistiques disponibles sont prises en compte.
+
+## Options de configuration
+
+Depuis la page **Paramètres → Appareils et services**, ouvrez l'intégration **Energy PDF Report** puis choisissez **Options** pour personnaliser les valeurs par défaut suivantes :
+
+- **Répertoire de sortie** : dossier utilisé pour stocker les rapports lorsqu'aucun répertoire n'est fourni au service.
+- **Période par défaut** : granularité (`day`, `week`, `month`) appliquée si l'appel au service ne précise pas de période.
+- **Modèle de nom de fichier** : patron utilisé pour générer automatiquement le nom du PDF lorsqu'aucun nom n'est fourni (variables disponibles : `{start}`, `{end}`, `{period}`).
+
+Ces options sont immédiatement prises en compte lors du prochain appel au service, sans nécessiter de redémarrage de Home Assistant.
+
 
 ## Support Unicode
 

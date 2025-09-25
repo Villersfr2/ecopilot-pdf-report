@@ -9,7 +9,19 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 
-from .const import DOMAIN
+from homeassistant.helpers import config_validation as cv
+
+
+from .const import (
+    CONF_FILENAME_PATTERN,
+    CONF_OUTPUT_DIR,
+    CONF_PERIOD,
+    DEFAULT_FILENAME_PATTERN,
+    DEFAULT_OUTPUT_DIR,
+    DEFAULT_PERIOD,
+    DOMAIN,
+    VALID_PERIODS,
+)
 
 
 class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -80,14 +92,42 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Gérer l'étape initiale du flux d'options (aucune option disponible)."""
+
+        """Gérer l'étape initiale du flux d'options."""
+
+
+        options = self.config_entry.options
 
         if user_input is not None:
-            return self.async_create_entry(title="", data={})
+            cleaned = {
+                CONF_OUTPUT_DIR: user_input[CONF_OUTPUT_DIR].strip(),
+                CONF_PERIOD: user_input[CONF_PERIOD],
+                CONF_FILENAME_PATTERN: user_input[CONF_FILENAME_PATTERN].strip(),
+            }
+            return self.async_create_entry(title="", data=cleaned)
+
+        data_schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_OUTPUT_DIR,
+                    default=options.get(CONF_OUTPUT_DIR, DEFAULT_OUTPUT_DIR),
+                ): cv.string,
+                vol.Required(
+                    CONF_PERIOD,
+                    default=options.get(CONF_PERIOD, DEFAULT_PERIOD),
+                ): vol.In(VALID_PERIODS),
+                vol.Required(
+                    CONF_FILENAME_PATTERN,
+                    default=options.get(
+                        CONF_FILENAME_PATTERN, DEFAULT_FILENAME_PATTERN
+                    ),
+                ): vol.All(cv.string, vol.Match(r".*\S.*")),
+            }
+        )
 
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema({}),
+            data_schema=data_schema,
         )
 
 
