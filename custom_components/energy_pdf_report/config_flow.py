@@ -13,19 +13,20 @@ from homeassistant.helpers import config_validation as cv
 
 
 from .const import (
+    CONF_DEFAULT_REPORT_TYPE,
     CONF_FILENAME_PATTERN,
     CONF_OUTPUT_DIR,
     CONF_PERIOD,
     DEFAULT_FILENAME_PATTERN,
     DEFAULT_OUTPUT_DIR,
-    DEFAULT_PERIOD,
+    DEFAULT_REPORT_TYPE,
     DOMAIN,
-    VALID_PERIODS,
+    VALID_REPORT_TYPES,
 )
 
 
 class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Gérer le flux de configuration."""
+    """Config flow for Energy PDF Report."""
 
     VERSION = 1
 
@@ -96,13 +97,20 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
         """Gérer l'étape initiale du flux d'options."""
 
 
-        options = self.config_entry.options
+        options = dict(self.config_entry.options or {})
+
+        legacy_period = options.get(CONF_PERIOD)
+        if (
+            CONF_DEFAULT_REPORT_TYPE not in options
+            and legacy_period in VALID_REPORT_TYPES
+        ):
+            options[CONF_DEFAULT_REPORT_TYPE] = legacy_period
 
         if user_input is not None:
             cleaned = {
                 CONF_OUTPUT_DIR: user_input[CONF_OUTPUT_DIR].strip(),
-                CONF_PERIOD: user_input[CONF_PERIOD],
                 CONF_FILENAME_PATTERN: user_input[CONF_FILENAME_PATTERN].strip(),
+                CONF_DEFAULT_REPORT_TYPE: user_input[CONF_DEFAULT_REPORT_TYPE],
             }
             return self.async_create_entry(title="", data=cleaned)
 
@@ -113,15 +121,17 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
                     default=options.get(CONF_OUTPUT_DIR, DEFAULT_OUTPUT_DIR),
                 ): cv.string,
                 vol.Required(
-                    CONF_PERIOD,
-                    default=options.get(CONF_PERIOD, DEFAULT_PERIOD),
-                ): vol.In(VALID_PERIODS),
-                vol.Required(
                     CONF_FILENAME_PATTERN,
                     default=options.get(
                         CONF_FILENAME_PATTERN, DEFAULT_FILENAME_PATTERN
                     ),
                 ): vol.All(cv.string, vol.Match(r".*\S.*")),
+                vol.Required(
+                    CONF_DEFAULT_REPORT_TYPE,
+                    default=options.get(
+                        CONF_DEFAULT_REPORT_TYPE, DEFAULT_REPORT_TYPE
+                    ),
+                ): vol.In(VALID_REPORT_TYPES),
             }
         )
 
@@ -131,9 +141,7 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
         )
 
 
-async def async_get_options_flow(
-    config_entry: config_entries.ConfigEntry,
-) -> EnergyPDFReportOptionsFlowHandler:
-    """Obtenir le gestionnaire du flux d'options."""
+async def async_get_options_flow(config_entry: config_entries.ConfigEntry):
+    """Return the options flow handler for this config entry."""
 
     return EnergyPDFReportOptionsFlowHandler(config_entry)

@@ -12,7 +12,7 @@ generate:
       example: "2024-01-31"
     period:
       name: Granularité
-      description: Granularité utilisée pour la récupération des statistiques (day, week, month). Par défaut, celle définie dans les options de l'intégration est utilisée.
+      description: Granularité utilisée pour la récupération des statistiques (day, week, month). Par défaut, la valeur définie via l'option default_report_type ou "day" est utilisée.
       example: day
     filename:
       name: Nom du fichier
