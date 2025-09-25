@@ -13,14 +13,15 @@ from homeassistant.helpers import config_validation as cv
 
 
 from .const import (
+    CONF_DEFAULT_REPORT_TYPE,
     CONF_FILENAME_PATTERN,
     CONF_OUTPUT_DIR,
     CONF_PERIOD,
     DEFAULT_FILENAME_PATTERN,
     DEFAULT_OUTPUT_DIR,
-    DEFAULT_PERIOD,
+    DEFAULT_REPORT_TYPE,
     DOMAIN,
-    VALID_PERIODS,
+    VALID_REPORT_TYPES,
 )
 
 
@@ -96,14 +97,18 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
         """Gérer l'étape initiale du flux d'options."""
 
 
-        options = self.config_entry.options
+        options = dict(self.config_entry.options or {})
+
+        legacy_period = options.get(CONF_PERIOD)
 
         if user_input is not None:
             cleaned = {
                 CONF_OUTPUT_DIR: user_input[CONF_OUTPUT_DIR].strip(),
-                CONF_PERIOD: user_input[CONF_PERIOD],
                 CONF_FILENAME_PATTERN: user_input[CONF_FILENAME_PATTERN].strip(),
             }
+            default_report_type = user_input.get(CONF_DEFAULT_REPORT_TYPE)
+            if default_report_type:
+                cleaned[CONF_DEFAULT_REPORT_TYPE] = default_report_type
             return self.async_create_entry(title="", data=cleaned)
 
         data_schema = vol.Schema(
@@ -113,15 +118,18 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
                     default=options.get(CONF_OUTPUT_DIR, DEFAULT_OUTPUT_DIR),
                 ): cv.string,
                 vol.Required(
-                    CONF_PERIOD,
-                    default=options.get(CONF_PERIOD, DEFAULT_PERIOD),
-                ): vol.In(VALID_PERIODS),
-                vol.Required(
                     CONF_FILENAME_PATTERN,
                     default=options.get(
                         CONF_FILENAME_PATTERN, DEFAULT_FILENAME_PATTERN
                     ),
                 ): vol.All(cv.string, vol.Match(r".*\S.*")),
+                vol.Optional(
+                    CONF_DEFAULT_REPORT_TYPE,
+                    default=options.get(
+                        CONF_DEFAULT_REPORT_TYPE,
+                        legacy_period if legacy_period in VALID_REPORT_TYPES else DEFAULT_REPORT_TYPE,
+                    ),
+                ): vol.In(VALID_REPORT_TYPES),
             }
         )
 

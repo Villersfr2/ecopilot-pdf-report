@@ -32,6 +32,7 @@ from homeassistant.components.energy.data import async_get_manager
 
 from .const import (
     CONF_DASHBOARD,
+    CONF_DEFAULT_REPORT_TYPE,
     CONF_END_DATE,
     CONF_FILENAME_PATTERN,
     CONF_OUTPUT_DIR,
@@ -173,6 +174,13 @@ def _async_register_services(hass: HomeAssistant) -> None:
     )
 
 
+_ALLOWED_OPTION_KEYS: tuple[str, ...] = (
+    CONF_OUTPUT_DIR,
+    CONF_FILENAME_PATTERN,
+    CONF_DEFAULT_REPORT_TYPE,
+)
+
+
 def _get_config_entry_options(hass: HomeAssistant) -> dict[str, Any]:
     """Fusionner les options configurées sur les entrées actives."""
 
@@ -185,7 +193,18 @@ def _get_config_entry_options(hass: HomeAssistant) -> dict[str, Any]:
     options: dict[str, Any] = {}
     for entry in entries:
         if not active_ids or entry.entry_id in active_ids:
-            options.update(entry.options or {})
+
+            entry_options = entry.options or {}
+            for key in _ALLOWED_OPTION_KEYS:
+                if key in entry_options:
+                    options[key] = entry_options[key]
+            if (
+                CONF_DEFAULT_REPORT_TYPE not in options
+                and CONF_PERIOD in entry_options
+                and entry_options[CONF_PERIOD] in VALID_PERIODS
+            ):
+                options[CONF_DEFAULT_REPORT_TYPE] = entry_options[CONF_PERIOD]
+
 
     return options
 
@@ -222,7 +241,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     options = _get_config_entry_options(hass)
     call_data = dict(call.data)
 
-    default_period = options.get(CONF_PERIOD, DEFAULT_PERIOD)
+    default_period = options.get(CONF_DEFAULT_REPORT_TYPE, options.get(CONF_PERIOD, DEFAULT_PERIOD))
     if CONF_PERIOD not in call_data:
         call_data[CONF_PERIOD] = default_period
 

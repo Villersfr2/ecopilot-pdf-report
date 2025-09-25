@@ -47,7 +47,6 @@ _CATEGORY_COLORS: Tuple[Tuple[str, Tuple[int, int, int]], ...] = (
     ("batterie", (155, 89, 182)),
 )
 
-
 _CATEGORY_ICON_HINTS: Tuple[Tuple[str, str], ...] = (
 
     ("solaire", "🌞"),
@@ -575,7 +574,6 @@ def _format_number(value: float) -> str:
     else:
         formatted = f"{value:,.2f}"
     return formatted.replace(",", " ")
-
 
 
 
