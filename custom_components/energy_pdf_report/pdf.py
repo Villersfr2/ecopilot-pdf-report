@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 from fpdf import FPDF
@@ -28,11 +29,14 @@ ZEBRA_COLORS = ((255, 255, 255), (245, 249, 252))
 TOTAL_FILL_COLOR = (235, 239, 243)
 TOTAL_TEXT_COLOR = (87, 96, 106)
 SECTION_SPACING = 6
+
 CHART_BACKGROUND = (245, 249, 253)
 BAR_TRACK_COLOR = (226, 235, 243)
 BAR_BORDER_COLOR = (202, 214, 223)
 
+
 _CATEGORY_COLORS: Tuple[Tuple[str, Tuple[int, int, int]], ...] = (
+
     ("solaire", (241, 196, 15)),
     ("électricité", (52, 152, 219)),
     ("réseau", (52, 152, 219)),
@@ -43,7 +47,9 @@ _CATEGORY_COLORS: Tuple[Tuple[str, Tuple[int, int, int]], ...] = (
     ("batterie", (155, 89, 182)),
 )
 
+
 _CATEGORY_ICON_HINTS: Tuple[Tuple[str, str], ...] = (
+
     ("solaire", "🌞"),
     ("réseau", "⚡"),
     ("électricité", "⚡"),
@@ -99,13 +105,16 @@ def _register_unicode_fonts(pdf: FPDF) -> Optional[_TemporaryFontCache]:
     return cache
 
 
+
 @dataclass
+
 class TableConfig:
     """Configuration d'un tableau à insérer dans le PDF."""
 
     title: str
     headers: Sequence[str]
     rows: Iterable[Sequence[str]]
+
     column_widths: Optional[Sequence[float]] = None
     emphasize_rows: Optional[Sequence[int]] = None
 
@@ -154,12 +163,15 @@ class EnergyReportPDF(FPDF):
 class EnergyPDFBuilder:
     """Constructeur simplifié de rapports PDF professionnels."""
 
+
     def __init__(
         self,
         title: str,
         period_label: str,
         generated_at: datetime,
+
         logo_path: Optional[Union[str, Path]] = None,
+
     ) -> None:
         """Initialiser le générateur de PDF."""
 
@@ -167,6 +179,7 @@ class EnergyPDFBuilder:
         self._pdf.set_auto_page_break(auto=True, margin=18)
         self._pdf.alias_nb_pages()
         self._font_cache = _register_unicode_fonts(self._pdf)
+
         self._logo_path = self._validate_logo(logo_path)
         self._content_started = False
         self._pdf.set_title(title)
@@ -184,7 +197,9 @@ class EnergyPDFBuilder:
         self,
         subtitle: str,
         details: Sequence[str],
+
         logo_path: Optional[Union[str, Path]] = None,
+
     ) -> None:
         """Ajouter une page de garde élégante."""
 
@@ -314,13 +329,16 @@ class EnergyPDFBuilder:
     def add_chart(
         self,
         title: str,
+
         series: Sequence[Tuple[str, float, str]],
         ylabel: Optional[str] = None,
     ) -> None:
+
         """Dessiner un graphique en barres/gauges directement avec fpdf2."""
 
         if not series:
             return
+
 
         values = [value for _, value, _ in series]
         if not any(abs(value) > 1e-6 for value in values):
@@ -329,6 +347,7 @@ class EnergyPDFBuilder:
         units = {unit for _, _, unit in series if unit}
         if ylabel is None and len(units) == 1:
             (ylabel,) = tuple(units)
+
 
         num_bars = len(series)
         bar_height = 8
@@ -421,7 +440,9 @@ class EnergyPDFBuilder:
 
         self._pdf.set_y(chart_top + chart_height + 4)
 
+
     def compute_column_widths(self, weights: Sequence[float]) -> List[float]:
+
         """Convertir des poids relatifs en largeurs exploitables par FPDF."""
 
         if not weights:
@@ -445,11 +466,13 @@ class EnergyPDFBuilder:
         self._pdf.set_text_color(*self._default_text_color)
 
     def output(self, path: str) -> None:
+
         """Sauvegarder le PDF en garantissant le nettoyage des ressources."""
 
         with ExitStack() as stack:
             stack.callback(self._cleanup_resources)
             self._pdf.output(path)
+
 
     def _cleanup_resources(self) -> None:
         """Nettoyer les répertoires temporaires."""
@@ -458,6 +481,11 @@ class EnergyPDFBuilder:
         if cache is not None:
             cache.cleanup()
             self._font_cache = None
+
+        assets_cache = getattr(self, "_assets_cache", None)
+        if assets_cache is not None:
+            assets_cache.cleanup()
+            self._assets_cache = None
 
     def __del__(self) -> None:  # pragma: no cover - best effort cleanup
         self._cleanup_resources()
@@ -474,8 +502,10 @@ class EnergyPDFBuilder:
         height: float,
         *,
         fill: bool = False,
+
         fill_color: Optional[Tuple[int, int, int]] = None,
         text_color: Optional[Tuple[int, int, int]] = None,
+
         font_style: str = "",
     ) -> None:
         """Dessiner une ligne du tableau."""
@@ -547,6 +577,61 @@ def _format_number(value: float) -> str:
     else:
         formatted = f"{value:,.2f}"
     return formatted.replace(",", " ")
+
+
+    def _validate_logo(self, logo_path: Optional[Union[str, Path]]) -> Optional[Path]:
+
+        if not logo_path:
+            return None
+        path = Path(logo_path)
+        if path.exists() and path.is_file():
+            return path
+        return None
+
+
+def _decorate_category(label: str) -> str:
+    """Ajouter une icône appropriée devant une catégorie si disponible."""
+
+    normalized = label.strip()
+    lowered = normalized.lower()
+    for keyword, icon in _CATEGORY_ICON_HINTS:
+        if keyword in lowered and not normalized.startswith(icon):
+            return f"{icon} {normalized}"
+    return normalized
+
+
+def _get_category_color(label: str) -> Tuple[int, int, int]:
+
+    """Choisir une couleur fixe en fonction de la catégorie."""
+
+    lowered = label.lower()
+    for keyword, color in _CATEGORY_COLORS:
+        if keyword in lowered:
+            return color
+    return PRIMARY_COLOR
+
+
+
+def _format_measure(value: float, unit: Optional[str]) -> str:
+
+    """Formater une valeur numérique avec unité."""
+
+    formatted = _format_number(value)
+    return f"{formatted} {unit}".strip() if unit else formatted
+
+
+def _format_number(value: float) -> str:
+    """Formater un nombre pour l'affichage dans le PDF."""
+
+    magnitude = abs(value)
+    if magnitude >= 1000:
+        formatted = f"{value:,.0f}"
+    elif magnitude >= 100:
+        formatted = f"{value:,.1f}"
+    else:
+        formatted = f"{value:,.2f}"
+    return formatted.replace(",", " ")
+
 
 
 __all__ = ["EnergyPDFBuilder", "TableConfig"]
