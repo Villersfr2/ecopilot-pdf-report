@@ -10,10 +10,46 @@ Ce composant personnalisé Home Assistant ajoute un service `energy_pdf_report.g
 
 
 ## Paramètres du service
-- `start_date` *(optionnel)* : date locale de début (format `YYYY-MM-DD`). Par défaut la période courante (jour, semaine ou mois) est utilisée.
-- `end_date` *(optionnel)* : date locale de fin (format `YYYY-MM-DD`). Si omis, la fin est déduite de la granularité.
-- `period` *(optionnel)* : granularité des statistiques (`day`, `week` ou `month`).
-- `filename` *(optionnel)* : nom du fichier PDF à générer (l'extension `.pdf` est ajoutée automatiquement si nécessaire).
-- `output_dir` *(optionnel)* : répertoire de sortie relatif au dossier de configuration ou chemin absolu. Par défaut `www/energy_reports`.
+- `start_date` *(optionnel)* : date locale de début (format `YYYY-MM-DD`). Par défaut la période courante (jour, semaine ou mois) est utilisée. Les valeurs provenant d'objets `date`, `datetime` ou de chaînes de caractères sont automatiquement converties.
+- `end_date` *(optionnel)* : date locale de fin (format `YYYY-MM-DD`). Si omis, la fin est déduite de la granularité. Les objets `datetime` sont convertis en date avant le traitement.
+- `period` *(optionnel)* : granularité des statistiques (`day`, `week` ou `month`). Si omis, la valeur définie dans les options de l'intégration est appliquée (par défaut `day`).
+- `filename` *(optionnel)* : nom du fichier PDF à générer (l'extension `.pdf` est ajoutée automatiquement si nécessaire). Si omis, le modèle défini dans les options de l'intégration est utilisé.
+- `output_dir` *(optionnel)* : répertoire de sortie relatif au dossier de configuration ou chemin absolu. Par défaut, celui défini dans les options de l'intégration (initialement `www/energy_reports`).
+- `dashboard` *(optionnel)* : identifiant ou nom du tableau de bord Énergie à analyser. Si omis, le tableau actif par défaut est utilisé.
 
-Le fichier généré est également signalé via une notification persistante dans Home Assistant.
+Le fichier généré est également signalé via une notification persistante dans Home Assistant, qui mentionne le tableau de bord utilisé lorsque ce paramètre est précisé.
+
+> ℹ️ Le nombre de statistiques indiqué dans le rapport correspond simplement aux identifiants uniques présents dans vos préférences du tableau de bord Énergie. L'intégration n'impose aucune limite : toutes les statistiques disponibles sont prises en compte.
+
+## Options de configuration
+
+Depuis la page **Paramètres → Appareils et services**, ouvrez l'intégration **Energy PDF Report** puis choisissez **Options** pour personnaliser les valeurs par défaut suivantes :
+
+- **Répertoire de sortie** : dossier utilisé pour stocker les rapports lorsqu'aucun répertoire n'est fourni au service.
+- **Période par défaut** : granularité (`day`, `week`, `month`) appliquée si l'appel au service ne précise pas de période.
+- **Modèle de nom de fichier** : patron utilisé pour générer automatiquement le nom du PDF lorsqu'aucun nom n'est fourni (variables disponibles : `{start}`, `{end}`, `{period}`).
+
+Ces options sont immédiatement prises en compte lors du prochain appel au service, sans nécessiter de redémarrage de Home Assistant.
+
+## Support Unicode
+
+Le rapport PDF embarque la police DejaVu Sans (regular et bold) compressée dans
+le code du composant. Lors de la génération, les fichiers TTF sont extraits dans
+un répertoire temporaire, enregistrés auprès de FPDF puis immédiatement
+nettoyés. Cette approche garantit l'affichage correct des caractères accentués
+et des symboles internationaux sans nécessiter de fichiers binaires dans le
+dépôt.
+
+## Script de vérification
+Pour valider rapidement que l'intégration, y compris la compatibilité avec le recorder,
+fonctionne correctement dans votre instance Home Assistant, un exemple de script est
+fourni dans [`examples/test_energy_pdf_report_script.yaml`](examples/test_energy_pdf_report_script.yaml).
+
+1. Copiez le contenu du fichier dans votre `scripts.yaml` (ou créez un nouveau script via l'interface en mode YAML).
+2. Enregistrez et rechargez les scripts si nécessaire.
+3. Exécutez le script **Test – Energy PDF Report** depuis l'interface.
+
+Le script appelle le service `energy_pdf_report.generate`, attend la notification
+persistante `energy_pdf_report_last_report` et consigne le message du rapport dans le
+Journal. En cas d'absence de notification dans la minute, une alerte supplémentaire
+est créée pour vous inviter à consulter les logs.
