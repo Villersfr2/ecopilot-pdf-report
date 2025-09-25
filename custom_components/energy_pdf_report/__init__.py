@@ -41,6 +41,7 @@ from .const import (
     DEFAULT_FILENAME_PATTERN,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_PERIOD,
+    DEFAULT_REPORT_TYPE,
     DOMAIN,
     PDF_TITLE,
     SERVICE_GENERATE_REPORT,
@@ -241,13 +242,15 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     options = _get_config_entry_options(hass)
     call_data = dict(call.data)
 
-    default_period = options.get(CONF_DEFAULT_REPORT_TYPE, options.get(CONF_PERIOD, DEFAULT_PERIOD))
-    if CONF_PERIOD not in call_data:
-        call_data[CONF_PERIOD] = default_period
 
-    period_value = call_data.get(CONF_PERIOD, default_period)
+    option_report_type = options.get(CONF_DEFAULT_REPORT_TYPE)
+    if option_report_type not in VALID_PERIODS:
+        option_report_type = None
+
+
+    period_value = call_data.get(CONF_PERIOD)
     if period_value not in VALID_PERIODS:
-        period_value = DEFAULT_PERIOD
+        period_value = option_report_type or DEFAULT_REPORT_TYPE
 
     period = str(period_value)
     call_data[CONF_PERIOD] = period
@@ -1147,7 +1150,7 @@ def _build_pdf(
     builder.add_paragraph(
         "Pour approfondir l'évolution temporelle et comparer les périodes,"
 
-        " référez-vous au tableau de bord Énergie de EcoPilot."
+        " référez-vous au tableau de bord Énergie de Home Assistant."
 
     )
 

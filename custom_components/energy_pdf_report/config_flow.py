@@ -101,10 +101,18 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
 
         legacy_period = options.get(CONF_PERIOD)
 
+        if (
+            CONF_DEFAULT_REPORT_TYPE not in options
+            and legacy_period in VALID_REPORT_TYPES
+        ):
+            options[CONF_DEFAULT_REPORT_TYPE] = legacy_period
+
+
         if user_input is not None:
             cleaned = {
                 CONF_OUTPUT_DIR: user_input[CONF_OUTPUT_DIR].strip(),
                 CONF_FILENAME_PATTERN: user_input[CONF_FILENAME_PATTERN].strip(),
+                CONF_DEFAULT_REPORT_TYPE: user_input[CONF_DEFAULT_REPORT_TYPE],
             }
             default_report_type = user_input.get(CONF_DEFAULT_REPORT_TYPE)
             if default_report_type:
@@ -123,11 +131,12 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_FILENAME_PATTERN, DEFAULT_FILENAME_PATTERN
                     ),
                 ): vol.All(cv.string, vol.Match(r".*\S.*")),
-                vol.Optional(
+
+                vol.Required(
                     CONF_DEFAULT_REPORT_TYPE,
                     default=options.get(
-                        CONF_DEFAULT_REPORT_TYPE,
-                        legacy_period if legacy_period in VALID_REPORT_TYPES else DEFAULT_REPORT_TYPE,
+                        CONF_DEFAULT_REPORT_TYPE, DEFAULT_REPORT_TYPE
+
                     ),
                 ): vol.In(VALID_REPORT_TYPES),
             }

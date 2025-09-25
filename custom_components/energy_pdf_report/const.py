@@ -6,7 +6,9 @@ DOMAIN = "energy_pdf_report"
 SERVICE_GENERATE_REPORT = "generate"
 DEFAULT_PERIOD = "day"
 VALID_PERIODS: tuple[str, ...] = ("day", "week", "month")
-DEFAULT_REPORT_TYPE = DEFAULT_PERIOD
+
+DEFAULT_REPORT_TYPE = "week"
+
 VALID_REPORT_TYPES = VALID_PERIODS
 DEFAULT_OUTPUT_DIR = "www/energy_reports"
 DEFAULT_FILENAME_PATTERN = "energy_report_{start}_{end}.pdf"
