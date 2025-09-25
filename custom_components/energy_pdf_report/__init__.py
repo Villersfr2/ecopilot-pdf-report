@@ -535,7 +535,6 @@ async def _async_fetch_dashboard_preferences_via_methods(
                                 )
                             return selection
 
-
                 primary = selections[0]
                 if primary.identifier is None:
                     return DashboardSelection(dashboard_id, primary.name, primary.preferences)
@@ -545,7 +544,6 @@ async def _async_fetch_dashboard_preferences_via_methods(
                 return DashboardSelection(dashboard_id, None, result)
 
     return None
-
 
 
 async def _await_if_needed(result: Any) -> Any:
@@ -569,6 +567,18 @@ def _format_dashboard_label(selection: DashboardSelection) -> str | None:
 
     return name or identifier
 
+
+            selections = _extract_named_preferences(result, dashboard_id)
+            if selections:
+                requested = _normalize_dashboard_key(dashboard_id)
+                if requested:
+                    for selection in selections:
+                        if _match_dashboard_key(selection, requested):
+                            if selection.identifier is None:
+                                return DashboardSelection(
+                                    dashboard_id, selection.name, selection.preferences
+                                )
+                            return selection
 
 
 def _resolve_period(
@@ -609,12 +619,15 @@ def _resolve_period(
     timezone = _select_timezone(hass)
 
     start_local = _localize_date(start_date, timezone)
-    # on travaille avec une fin exclusive (lendemain à 00:00)
-    end_local_exclusive = _localize_date(end_date + timedelta(days=1), timezone)
+
+    # ``end_date`` reste inclusif comme dans le tableau de bord Énergie ;
+    # recorder se charge ensuite de convertir ce point de sortie en borne exclusive.
+    end_local = _localize_date(end_date, timezone)
+    end_local_exclusive = end_local + timedelta(days=1)
 
 
     start_utc = dt_util.as_utc(start_local)
-    end_utc = dt_util.as_utc(end_local_exclusive)
+    end_utc = dt_util.as_utc(end_local)
     display_end = end_local_exclusive - timedelta(seconds=1)
 
 
@@ -810,7 +823,7 @@ async def _collect_statistics(
         statistic_ids,
         bucket,
         None,
-        {"sum", "change"},
+        {"change"},
     )
 
     return stats_map, metadata
@@ -865,17 +878,12 @@ def _calculate_totals(
         if not rows:
             continue
 
-        # Ordonner les entrées pour pouvoir comparer les premiers et derniers points.
-        ordered_rows = sorted(
-            rows,
-            key=lambda row: row.get("start") or row.get("end"),
-        )
 
-        # Lorsque le champ ``change`` est disponible, il représente déjà la
-        # variation sur l'intervalle considéré. Nous pouvons donc le sommer.
         change_total = 0.0
         has_change = False
-        for row in ordered_rows:
+
+        for row in rows:
+
             change_value = row.get("change")
             if change_value is None:
                 continue
@@ -884,39 +892,7 @@ def _calculate_totals(
 
         if has_change:
             totals[statistic_id] = change_total
-            continue
 
-        def _difference_from_progression(values: list[float]) -> float | None:
-            """Retourner la variation cumulée à partir d'une série de valeurs."""
-
-            if not values:
-                return None
-
-            if len(values) == 1:
-                # Une seule mesure disponible : elle correspond au total pour
-                # la période demandée.
-                return values[0]
-
-            return values[-1] - values[0]
-
-        sum_progression = _difference_from_progression(
-            [float(row["sum"]) for row in ordered_rows if row.get("sum") is not None]
-        )
-
-        if sum_progression is not None:
-            totals[statistic_id] = sum_progression
-            continue
-
-        state_progression = _difference_from_progression(
-            [
-                float(row["state"])
-                for row in ordered_rows
-                if row.get("state") is not None
-            ]
-        )
-
-        if state_progression is not None:
-            totals[statistic_id] = state_progression
 
     return totals
 
