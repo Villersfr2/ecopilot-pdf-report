@@ -203,29 +203,33 @@ _ALLOWED_OPTION_KEYS: tuple[str, ...] = (
 
 
 def _get_config_entry_options(hass: HomeAssistant) -> dict[str, Any]:
-    """Fusionner les options configurées sur les entrées actives."""
+    """Fusionner data et options des entrées actives."""
 
     entries = hass.config_entries.async_entries(DOMAIN)
     if not entries:
         return {}
+
     domain_data = hass.data.get(DOMAIN) or {}
     active_ids = _active_entry_ids(domain_data)
 
     options: dict[str, Any] = {}
+
     for entry in entries:
         if not active_ids or entry.entry_id in active_ids:
+            # Fusion : entry.data = valeurs install, entry.options = modifs UI
+            merged = {**(entry.data or {}), **(entry.options or {})}
 
-            entry_options = entry.options or {}
             for key in _ALLOWED_OPTION_KEYS:
-                if key in entry_options:
-                    options[key] = entry_options[key]
+                if key in merged:
+                    options[key] = merged[key]
+
+            # Compatibilité ancienne version avec "period"
             if (
                 CONF_DEFAULT_REPORT_TYPE not in options
-                and CONF_PERIOD in entry_options
-                and entry_options[CONF_PERIOD] in VALID_PERIODS
+                and CONF_PERIOD in merged
+                and merged[CONF_PERIOD] in VALID_PERIODS
             ):
-                options[CONF_DEFAULT_REPORT_TYPE] = entry_options[CONF_PERIOD]
-
+                options[CONF_DEFAULT_REPORT_TYPE] = merged[CONF_PERIOD]
 
     return options
 
