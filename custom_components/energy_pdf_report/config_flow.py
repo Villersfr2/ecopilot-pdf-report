@@ -16,7 +16,6 @@ from .const import (
     CONF_DEFAULT_REPORT_TYPE,
     CONF_FILENAME_PATTERN,
     CONF_OUTPUT_DIR,
-    CONF_PERIOD,
     DEFAULT_FILENAME_PATTERN,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_REPORT_TYPE,
@@ -98,15 +97,6 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
 
 
         options = dict(self.config_entry.options or {})
-
-        legacy_period = options.get(CONF_PERIOD)
-
-        if (
-            CONF_DEFAULT_REPORT_TYPE not in options
-            and legacy_period in VALID_REPORT_TYPES
-        ):
-            options[CONF_DEFAULT_REPORT_TYPE] = legacy_period
-
 
         if user_input is not None:
             cleaned = {

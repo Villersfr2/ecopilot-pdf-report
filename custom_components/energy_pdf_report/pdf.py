@@ -14,6 +14,9 @@ from fpdf import FPDF
 
 from .font_data import FONT_DATA
 
+from .translations import ReportTranslations
+
+
 FONT_FAMILY = "DejaVuSans"
 _FONT_FILES: Dict[str, str] = {
     "": "DejaVuSans.ttf",
@@ -114,16 +117,26 @@ class TableConfig:
 
     column_widths: Optional[Sequence[float]] = None
     emphasize_rows: Optional[Sequence[int]] = None
+    first_column_is_category: bool = False
 
 
 class EnergyReportPDF(FPDF):
     """PDF thématisé avec en-tête et pied de page personnalisés."""
 
-    def __init__(self, title: str, period_label: str, generated_at: datetime) -> None:
+
+    def __init__(
+        self,
+        title: str,
+        period_label: str,
+        generated_at: datetime,
+
+        translations: ReportTranslations,
+    ) -> None:
         super().__init__()
         self.report_title = title
         self.period_label = period_label
         self.generated_at = generated_at
+        self.translations = translations
         self._suppress_header = False
         self._suppress_footer = False
         self.set_margins(15, 22, 15)
@@ -152,8 +165,14 @@ class EnergyReportPDF(FPDF):
         self.set_y(-15)
         self.set_font(FONT_FAMILY, "", 9)
         self.set_text_color(*LIGHT_TEXT_COLOR)
-        self.cell(0, 5, f"Page {self.page_no()} sur {{nb}}", align="L")
-        self.cell(0, 5, f"Généré le {self.generated_at.strftime('%d/%m/%Y %H:%M')}", align="R")
+        page_text = self.translations.footer_page.format(
+            current=self.page_no(), total="{nb}"
+        )
+        generated_text = self.translations.footer_generated.format(
+            timestamp=self.generated_at.strftime("%d/%m/%Y %H:%M")
+        )
+        self.cell(0, 5, page_text, align="L")
+        self.cell(0, 5, generated_text, align="R")
         self.set_text_color(*TEXT_COLOR)
 
 
@@ -165,12 +184,13 @@ class EnergyPDFBuilder:
         title: str,
         period_label: str,
         generated_at: datetime,
+        translations: ReportTranslations,
         logo_path: Optional[Union[str, Path]] = None,
-
     ) -> None:
         """Initialiser le générateur de PDF."""
 
-        self._pdf = EnergyReportPDF(title, period_label, generated_at)
+        self._translations = translations
+        self._pdf = EnergyReportPDF(title, period_label, generated_at, translations)
         self._pdf.set_auto_page_break(auto=True, margin=18)
         self._pdf.alias_nb_pages()
         self._font_cache = _register_unicode_fonts(self._pdf)
@@ -272,7 +292,9 @@ class EnergyPDFBuilder:
 
         header_height = 8
         row_height = 7
-        decorate_first_column = bool(headers and "catégorie" in headers[0].lower())
+
+        decorate_first_column = config.first_column_is_category
+
 
         self._pdf.set_font(FONT_FAMILY, "B", 13)
         self._ensure_space(header_height + 6)
@@ -288,7 +310,9 @@ class EnergyPDFBuilder:
         self._pdf.set_text_color(*self._default_text_color)
 
         if not rows:
-            empty_row = ["Aucune donnée disponible"] + [""] * (len(headers) - 1)
+
+            empty_row = [self._translations.table_empty] + [""] * (len(headers) - 1)
+
             self._draw_row(empty_row, column_widths, row_height, fill=True)
             self._pdf.ln(1)
             return
@@ -343,7 +367,6 @@ class EnergyPDFBuilder:
         if ylabel is None and len(units) == 1:
             (ylabel,) = tuple(units)
 
-
         num_bars = len(series)
         bar_height = 8
         bar_spacing = 4
@@ -358,7 +381,10 @@ class EnergyPDFBuilder:
         if ylabel:
             self._pdf.set_font(FONT_FAMILY, "", 9)
             self._pdf.set_text_color(*LIGHT_TEXT_COLOR)
-            self._pdf.cell(0, 5, f"Unités : {ylabel}", ln=True)
+
+            units_label = self._translations.chart_units.format(unit=ylabel)
+            self._pdf.cell(0, 5, units_label, ln=True)
+
             self._pdf.set_text_color(*self._default_text_color)
         else:
             self._pdf.ln(1)

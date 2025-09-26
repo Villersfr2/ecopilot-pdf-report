@@ -38,16 +38,21 @@ from .const import (
     CONF_OUTPUT_DIR,
     CONF_PERIOD,
     CONF_START_DATE,
+    CONF_LANGUAGE,
     DEFAULT_FILENAME_PATTERN,
     DEFAULT_OUTPUT_DIR,
+    DEFAULT_LANGUAGE,
     DEFAULT_PERIOD,
     DEFAULT_REPORT_TYPE,
     DOMAIN,
-    PDF_TITLE,
+    SUPPORTED_LANGUAGES,
     SERVICE_GENERATE_REPORT,
     VALID_PERIODS,
 )
 from .pdf import EnergyPDFBuilder, TableConfig, _decorate_category
+
+from .translations import ReportTranslations, get_report_translations
+
 
 if TYPE_CHECKING:
     from homeassistant.components.energy.data import EnergyPreferences
@@ -65,6 +70,8 @@ SERVICE_GENERATE_SCHEMA = vol.Schema(
         vol.Optional(CONF_FILENAME): cv.string,
 
         vol.Optional(CONF_OUTPUT_DIR): cv.string,
+
+        vol.Optional(CONF_LANGUAGE): vol.In(SUPPORTED_LANGUAGES),
 
         vol.Optional(CONF_DASHBOARD): cv.string,
     }
@@ -189,6 +196,9 @@ _ALLOWED_OPTION_KEYS: tuple[str, ...] = (
     CONF_OUTPUT_DIR,
     CONF_FILENAME_PATTERN,
     CONF_DEFAULT_REPORT_TYPE,
+
+    CONF_LANGUAGE,
+
 )
 
 
@@ -296,6 +306,14 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
     dashboard_label = _format_dashboard_label(selection)
 
+    language = call.data.get(
+        CONF_LANGUAGE, options.get(CONF_LANGUAGE, DEFAULT_LANGUAGE)
+    )
+    if language not in SUPPORTED_LANGUAGES:
+        language = DEFAULT_LANGUAGE
+
+    translations = get_report_translations(language)
+
     pdf_path = await hass.async_add_executor_job(
         _build_pdf,
         metrics,
@@ -312,30 +330,40 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
         period,
 
+        translations,
     )
 
     message_lines = [
-        (
-            "Rapport énergie généré pour la période du "
-            f"{display_start.date().isoformat()} au {display_end.date().isoformat()}."
+        translations.notification_line_period.format(
+            start=display_start.date().isoformat(),
+            end=display_end.date().isoformat(),
         )
     ]
 
     if dashboard_label:
-        message_lines.append(f"Tableau de bord : {dashboard_label}")
+        message_lines.append(
+            translations.notification_line_dashboard.format(
+                dashboard=dashboard_label
+            )
+        )
 
-    message_lines.append(f"Fichier : {pdf_path}")
+    message_lines.append(translations.notification_line_file.format(path=pdf_path))
     message = "\n".join(message_lines)
     persistent_notification.async_create(
         hass,
         message,
-        title="Rapport énergie",
+        title=translations.notification_title,
         notification_id=f"{DOMAIN}_last_report",
     )
     if dashboard_label:
-        _LOGGER.info("Rapport énergie généré (%s): %s", dashboard_label, pdf_path)
+        _LOGGER.info(
+            "Rapport %s généré (%s): %s",
+            translations.language,
+            dashboard_label,
+            pdf_path,
+        )
     else:
-        _LOGGER.info("Rapport énergie généré: %s", pdf_path)
+        _LOGGER.info("Rapport %s généré: %s", translations.language, pdf_path)
 
 
 async def _async_select_dashboard_preferences(
@@ -1014,6 +1042,8 @@ def _build_pdf(
 
     period: str,
 
+    translations: ReportTranslations,
+
 ) -> str:
     """Assembler le PDF et le sauvegarder sur disque."""
 
@@ -1054,87 +1084,82 @@ def _build_pdf(
     file_path = output_dir / filename
 
     period_label = f"{display_start.strftime('%d/%m/%Y')} → {display_end.strftime('%d/%m/%Y')}"
+
+    bucket_label = translations.bucket_labels.get(bucket, bucket)
     logo_path = _discover_logo_candidate(output_dir)
+    subtitle = translations.cover_subtitle.format(
+        start=display_start.strftime("%d/%m/%Y"),
+        end=display_end.strftime("%d/%m/%Y"),
+    )
     builder = EnergyPDFBuilder(
-        PDF_TITLE,
+        translations.pdf_title,
         period_label=period_label,
         generated_at=generated_at,
+        translations=translations,
+
         logo_path=logo_path,
     )
 
     cover_details = [
-        f"Période : {period_label}",
-        f"Granularité des statistiques : {bucket}",
-        f"Statistiques incluses : {len(metrics)}",
-        f"Rapport généré le : {generated_at.strftime('%d/%m/%Y %H:%M')}",
+
+        translations.cover_period.format(period=period_label),
+        translations.cover_bucket.format(bucket=bucket_label),
+        translations.cover_stats.format(count=len(metrics)),
+        translations.cover_generated.format(
+            timestamp=generated_at.strftime("%d/%m/%Y %H:%M")
+        ),
     ]
     if dashboard_label:
-        cover_details.insert(1, f"Tableau d'énergie : {dashboard_label}")
+        cover_details.insert(
+            1, translations.cover_dashboard.format(dashboard=dashboard_label)
+        )
 
-    builder.add_cover_page(
-        subtitle=(
-            f"Rapport énergie du {display_start.strftime('%d/%m/%Y')} "
-            f"au {display_end.strftime('%d/%m/%Y')}"
-        ),
-        details=cover_details,
-    )
+    builder.add_cover_page(subtitle=subtitle, details=cover_details)
 
+    builder.add_section_title(translations.summary_title)
+    builder.add_paragraph(translations.summary_intro)
 
-    builder.add_section_title("Résumé global")
-
-    builder.add_paragraph(
-        "Cette section présente les totaux consolidés sur la période analysée."
-    )
 
     summary_rows, summary_series = _prepare_summary_rows(metrics, totals, metadata)
     summary_widths = builder.compute_column_widths((0.55, 0.27, 0.18))
     builder.add_table(
         TableConfig(
-            title="Synthèse par catégorie",
-            headers=("Catégorie", "Total", "Unité"),
+            title=translations.summary_table_title,
+            headers=translations.summary_headers,
             rows=summary_rows,
             column_widths=summary_widths,
             emphasize_rows=list(range(len(summary_rows))),
+
+            first_column_is_category=True,
         )
     )
 
-    builder.add_paragraph(
-        "Les totaux correspondent à la variation mesurée dans le tableau de bord"
-        " énergie sur la période sélectionnée."
-    )
-    builder.add_paragraph(
-        "Les valeurs négatives indiquent un flux exporté ou une compensation."
-    )
+    builder.add_paragraph(translations.summary_note_totals)
+    builder.add_paragraph(translations.summary_note_negative)
 
+    builder.add_section_title(translations.detail_title)
+    builder.add_paragraph(translations.detail_intro)
 
-    builder.add_section_title("Analyse par catégorie / source")
-
-    builder.add_paragraph(
-        "Chaque statistique suivie est listée avec sa contribution précise afin de"
-        " faciliter l'analyse fine par origine ou type de consommation."
-    )
 
     detail_rows = _prepare_detail_rows(metrics, totals, metadata)
     detail_widths = builder.compute_column_widths((0.26, 0.44, 0.18, 0.12))
     builder.add_table(
         TableConfig(
-            title="Détail des statistiques",
-            headers=("Catégorie", "Statistique", "Total", "Unité"),
+            title=translations.detail_table_title,
+            headers=translations.detail_headers,
             rows=detail_rows,
             column_widths=detail_widths,
+            first_column_is_category=True,
         )
     )
 
     if summary_series:
-        builder.add_paragraph(
-            "La visualisation suivante met en avant la répartition des flux"
 
-            " pour chaque catégorie suivie et matérialise l'équilibre"
-            " production / consommation."
-        )
-        builder.add_chart("Répartition par catégorie", summary_series)
+        builder.add_paragraph(translations.chart_intro)
+        builder.add_chart(translations.chart_title, summary_series)
 
-    builder.add_section_title("Conclusion")
+    builder.add_section_title(translations.conclusion_title)
+
 
     if summary_series:
         units = {unit for _, _, unit in summary_series if unit}
@@ -1144,7 +1169,9 @@ def _build_pdf(
         if unit_label:
             formatted_total = f"{formatted_total} {unit_label}"
         builder.add_paragraph(
-            f"Le flux net observé sur la période atteint {formatted_total}.",
+
+            translations.conclusion_total.format(total=formatted_total),
+
             bold=True,
         )
 
@@ -1155,18 +1182,17 @@ def _build_pdf(
         if dominant_unit:
             formatted_dominant = f"{formatted_dominant} {dominant_unit}"
         builder.add_paragraph(
-            "La catégorie la plus significative est "
-            f"{dominant_category} avec {formatted_dominant}."
+
+            translations.conclusion_dominant.format(
+                category=dominant_category,
+                value=formatted_dominant,
+            )
         )
 
-    builder.add_paragraph(
-        "Pour approfondir l'évolution temporelle et comparer les périodes,"
+    builder.add_paragraph(translations.conclusion_hint)
 
-        " référez-vous au tableau de bord Énergie de Home Assistant."
+    builder.add_footer(translations.footer_path.format(path=file_path))
 
-    )
-
-    builder.add_footer(f"Chemin du fichier : {file_path}")
     builder.output(str(file_path))
 
     return str(file_path)
