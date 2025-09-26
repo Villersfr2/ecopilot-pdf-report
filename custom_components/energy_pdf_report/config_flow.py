@@ -1,26 +1,26 @@
 """Flux de configuration pour l'intégration Energy PDF Report."""
 
 from __future__ import annotations
-
 from typing import Any
 
 import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
-
 from homeassistant.helpers import config_validation as cv
-
 
 from .const import (
     CONF_DEFAULT_REPORT_TYPE,
     CONF_FILENAME_PATTERN,
     CONF_OUTPUT_DIR,
+    CONF_LANGUAGE,
     DEFAULT_FILENAME_PATTERN,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_REPORT_TYPE,
+    DEFAULT_LANGUAGE,
     DOMAIN,
     VALID_REPORT_TYPES,
+    SUPPORTED_LANGUAGES,
 )
 
 
@@ -31,134 +31,62 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
-        """Gérer l'étape initiale lancée par l'utilisateur."""
+    ) -> FlowResult:
+        """Handle the initial step."""
 
-        if self._async_current_entries():
-            return await self.async_step_reinstall_confirm(user_input)
+        errors: dict[str, str] = {}
 
         if user_input is not None:
-            default_options = {
-                CONF_OUTPUT_DIR: DEFAULT_OUTPUT_DIR,
-                CONF_FILENAME_PATTERN: DEFAULT_FILENAME_PATTERN,
-                CONF_DEFAULT_REPORT_TYPE: DEFAULT_REPORT_TYPE,
-            }
-
             return self.async_create_entry(
                 title="Rapport PDF Énergie",
-                data={},
-                options=default_options,
+                data=user_input,  # 👉 valeurs stockées directement dans data
             )
 
-        return self.async_show_form(step_id="user", data_schema=vol.Schema({}))
-
-    async def async_step_reinstall_confirm(
-        self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
-        """Confirmer la réinstallation en supprimant l'entrée existante."""
-
-        existing_entries = self._async_current_entries()
-        if not existing_entries:
-            return await self.async_step_user(user_input)
-
-        if user_input is not None:
-            removed = await self.hass.config_entries.async_remove(
-                existing_entries[0].entry_id
-            )
-            if not removed:
-                return self.async_abort(reason="remove_failed")
-
-            return await self.async_step_user({})
+        # Première installation → afficher formulaire avec valeurs par défaut
+        data_schema = vol.Schema(
+            {
+                vol.Required(CONF_OUTPUT_DIR, default=DEFAULT_OUTPUT_DIR): cv.string,
+                vol.Required(CONF_FILENAME_PATTERN, default=DEFAULT_FILENAME_PATTERN): cv.string,
+                vol.Required(CONF_DEFAULT_REPORT_TYPE, default=DEFAULT_REPORT_TYPE): vol.In(VALID_REPORT_TYPES),
+                vol.Required(CONF_LANGUAGE, default=DEFAULT_LANGUAGE): vol.In(SUPPORTED_LANGUAGES),
+            }
+        )
 
         return self.async_show_form(
-            step_id="reinstall_confirm",
-            data_schema=vol.Schema({}),
-            description_placeholders={
-                "title": existing_entries[0].title,
-            },
+            step_id="user",
+            data_schema=data_schema,
+            errors=errors,
         )
-
-    async def async_step_import(
-        self, user_input: dict[str, Any]
-    ) -> config_entries.ConfigFlowResult:
-        """Gérer une importation depuis YAML."""
-
-
-        if self._async_current_entries():
-            return self.async_abort(reason="already_configured")
-
-        default_options = {
-            CONF_OUTPUT_DIR: DEFAULT_OUTPUT_DIR,
-            CONF_FILENAME_PATTERN: DEFAULT_FILENAME_PATTERN,
-            CONF_DEFAULT_REPORT_TYPE: DEFAULT_REPORT_TYPE,
-        }
-
-        return self.async_create_entry(
-            title="Rapport PDF Énergie",
-            data={},
-            options=default_options,
-        )
-
 
 
 class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
-    """Gérer le flux d'options."""
+    """Handle options for Energy PDF Report."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialiser la classe."""
-
+        """Initialize options flow."""
         self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
 
-        """Gérer l'étape initiale du flux d'options."""
-
-
-        options = dict(self.config_entry.options or {})
+        data = dict(self.config_entry.data)  # 👉 récupérer les valeurs de base
 
         if user_input is not None:
-            cleaned = {
-                CONF_OUTPUT_DIR: user_input[CONF_OUTPUT_DIR].strip(),
-                CONF_FILENAME_PATTERN: user_input[CONF_FILENAME_PATTERN].strip(),
-                CONF_DEFAULT_REPORT_TYPE: user_input[CONF_DEFAULT_REPORT_TYPE],
-            }
-            default_report_type = user_input.get(CONF_DEFAULT_REPORT_TYPE)
-            if default_report_type:
-                cleaned[CONF_DEFAULT_REPORT_TYPE] = default_report_type
-            return self.async_create_entry(title="", data=cleaned)
+            return self.async_create_entry(title="", data=user_input)
 
         data_schema = vol.Schema(
             {
-                vol.Required(
-                    CONF_OUTPUT_DIR,
-                    default=options.get(CONF_OUTPUT_DIR, DEFAULT_OUTPUT_DIR),
-                ): cv.string,
-                vol.Required(
-                    CONF_FILENAME_PATTERN,
-                    default=options.get(
-                        CONF_FILENAME_PATTERN, DEFAULT_FILENAME_PATTERN
-                    ),
-                ): vol.All(cv.string, vol.Match(r".*\S.*")),
-
-                vol.Required(
-                    CONF_DEFAULT_REPORT_TYPE,
-                    default=options.get(
-                        CONF_DEFAULT_REPORT_TYPE, DEFAULT_REPORT_TYPE
-
-                    ),
-                ): vol.In(VALID_REPORT_TYPES),
+                vol.Required(CONF_OUTPUT_DIR, default=data.get(CONF_OUTPUT_DIR, DEFAULT_OUTPUT_DIR)): cv.string,
+                vol.Required(CONF_FILENAME_PATTERN, default=data.get(CONF_FILENAME_PATTERN, DEFAULT_FILENAME_PATTERN)): cv.string,
+                vol.Required(CONF_DEFAULT_REPORT_TYPE, default=data.get(CONF_DEFAULT_REPORT_TYPE, DEFAULT_REPORT_TYPE)): vol.In(VALID_REPORT_TYPES),
+                vol.Required(CONF_LANGUAGE, default=data.get(CONF_LANGUAGE, DEFAULT_LANGUAGE)): vol.In(SUPPORTED_LANGUAGES),
             }
         )
 
-        return self.async_show_form(
-            step_id="init",
-            data_schema=data_schema,
-        )
+        return self.async_show_form(step_id="init", data_schema=data_schema)
 
 
 async def async_get_options_flow(config_entry: config_entries.ConfigEntry):
-    """Return the options flow handler for this config entry."""
-
+    """Return the options flow handler."""
     return EnergyPDFReportOptionsFlowHandler(config_entry)
