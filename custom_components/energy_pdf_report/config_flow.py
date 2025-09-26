@@ -38,7 +38,17 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return await self.async_step_reinstall_confirm(user_input)
 
         if user_input is not None:
-            return self.async_create_entry(title="Rapport PDF Énergie", data={})
+            default_options = {
+                CONF_OUTPUT_DIR: DEFAULT_OUTPUT_DIR,
+                CONF_FILENAME_PATTERN: DEFAULT_FILENAME_PATTERN,
+                CONF_DEFAULT_REPORT_TYPE: DEFAULT_REPORT_TYPE,
+            }
+
+            return self.async_create_entry(
+                title="Rapport PDF Énergie",
+                data={},
+                options=default_options,
+            )
 
         return self.async_show_form(step_id="user", data_schema=vol.Schema({}))
 
@@ -77,7 +87,17 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if self._async_current_entries():
             return self.async_abort(reason="already_configured")
 
-        return self.async_create_entry(title="Rapport PDF Énergie", data={})
+        default_options = {
+            CONF_OUTPUT_DIR: DEFAULT_OUTPUT_DIR,
+            CONF_FILENAME_PATTERN: DEFAULT_FILENAME_PATTERN,
+            CONF_DEFAULT_REPORT_TYPE: DEFAULT_REPORT_TYPE,
+        }
+
+        return self.async_create_entry(
+            title="Rapport PDF Énergie",
+            data={},
+            options=default_options,
+        )
 
 
 
