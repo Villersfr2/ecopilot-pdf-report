@@ -12,7 +12,7 @@ generate:
       example: "2024-01-31"
     period:
       name: Granularité
-      description: Granularité utilisée pour la récupération des statistiques (day, week, month). Par défaut, celle définie dans les options de l'intégration est utilisée.
+      description: Granularité utilisée pour la récupération des statistiques (day, week, month). Par défaut, la valeur définie via l'option default_report_type ou "day" est utilisée.
       example: day
     filename:
       name: Nom du fichier
@@ -21,6 +21,12 @@ generate:
       name: Répertoire de sortie
       description: Répertoire relatif au dossier de configuration ou chemin absolu pour stocker les rapports. Par défaut, le répertoire défini dans les options est utilisé.
       example: www/energy_reports
+
+
+    language:
+      name: Langue du rapport
+      description: "Langue utilisée pour le contenu du PDF (fr, nl ou en)."
+      example: fr
 
 
     dashboard:

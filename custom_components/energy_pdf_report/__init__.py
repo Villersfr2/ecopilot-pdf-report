@@ -32,20 +32,25 @@ from homeassistant.components.energy.data import async_get_manager
 
 from .const import (
     CONF_DASHBOARD,
+    CONF_DEFAULT_REPORT_TYPE,
     CONF_END_DATE,
     CONF_FILENAME_PATTERN,
     CONF_OUTPUT_DIR,
     CONF_PERIOD,
     CONF_START_DATE,
+    CONF_LANGUAGE,
     DEFAULT_FILENAME_PATTERN,
     DEFAULT_OUTPUT_DIR,
+    DEFAULT_LANGUAGE,
     DEFAULT_PERIOD,
+    DEFAULT_REPORT_TYPE,
     DOMAIN,
-    PDF_TITLE,
+    SUPPORTED_LANGUAGES,
     SERVICE_GENERATE_REPORT,
     VALID_PERIODS,
 )
-from .pdf import EnergyPDFBuilder, TableConfig
+from .pdf import EnergyPDFBuilder, TableConfig, _decorate_category
+from .translations import ReportTranslations, get_report_translations
 
 if TYPE_CHECKING:
     from homeassistant.components.energy.data import EnergyPreferences
@@ -64,13 +69,14 @@ SERVICE_GENERATE_SCHEMA = vol.Schema(
 
         vol.Optional(CONF_OUTPUT_DIR): cv.string,
 
+        vol.Optional(CONF_LANGUAGE): vol.In(SUPPORTED_LANGUAGES),
+
         vol.Optional(CONF_DASHBOARD): cv.string,
     }
 )
 
 
-DATA_SERVICES_REGISTERED = "services_registered"
-DATA_CONFIG_ENTRY_IDS = "entry_ids"
+DATA_SERVICES_REGISTERED = "_services_registered"
 
 @dataclass(slots=True)
 class MetricDefinition:
@@ -117,8 +123,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Initialiser les structures de données du domaine."""
 
     hass.data.setdefault(DOMAIN, {})
-    domain_data = hass.data[DOMAIN]
-    domain_data.setdefault(DATA_CONFIG_ENTRY_IDS, set())
 
     _async_register_services(hass)
 
@@ -129,8 +133,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Configurer une entrée de configuration."""
 
     domain_data = hass.data.setdefault(DOMAIN, {})
-    entry_ids: set[str] = domain_data.setdefault(DATA_CONFIG_ENTRY_IDS, set())
-    entry_ids.add(entry.entry_id)
+    domain_data[entry.entry_id] = entry
+
+    entry.async_on_unload(entry.add_update_listener(update_listener))
 
     _async_register_services(hass)
 
@@ -144,10 +149,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not domain_data:
         return True
 
-    entry_ids: set[str] = domain_data.setdefault(DATA_CONFIG_ENTRY_IDS, set())
-    entry_ids.discard(entry.entry_id)
+    domain_data.pop(entry.entry_id, None)
 
-    if not entry_ids:
+    if not _domain_has_config_entries(domain_data):
         hass.services.async_remove(DOMAIN, SERVICE_GENERATE_REPORT)
         domain_data.pop(DATA_SERVICES_REGISTERED, None)
         hass.data.pop(DOMAIN, None)
@@ -176,26 +180,60 @@ def _async_register_services(hass: HomeAssistant) -> None:
     )
 
 
+async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Recharger l'intégration lorsque les options sont mises à jour."""
+
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
+_ALLOWED_OPTION_KEYS: tuple[str, ...] = (
+    CONF_OUTPUT_DIR,
+    CONF_FILENAME_PATTERN,
+    CONF_DEFAULT_REPORT_TYPE,
+    CONF_LANGUAGE,
+)
+
+
 def _get_config_entry_options(hass: HomeAssistant) -> dict[str, Any]:
     """Fusionner les options configurées sur les entrées actives."""
 
     entries = hass.config_entries.async_entries(DOMAIN)
     if not entries:
         return {}
-
     domain_data = hass.data.get(DOMAIN) or {}
-    entry_ids = domain_data.get(DATA_CONFIG_ENTRY_IDS)
+    active_ids = _active_entry_ids(domain_data)
 
     options: dict[str, Any] = {}
-
-    if isinstance(entry_ids, set) and entry_ids:
-        for entry in entries:
-            if entry.entry_id in entry_ids:
-                options.update(entry.options or {})
-    else:
-        options.update(entries[0].options or {})
+    for entry in entries:
+        if not active_ids or entry.entry_id in active_ids:
+            entry_options = entry.options or {}
+            for key in _ALLOWED_OPTION_KEYS:
+                if key in entry_options:
+                    options[key] = entry_options[key]
+            if (
+                CONF_DEFAULT_REPORT_TYPE not in options
+                and CONF_PERIOD in entry_options
+                and entry_options[CONF_PERIOD] in VALID_PERIODS
+            ):
+                options[CONF_DEFAULT_REPORT_TYPE] = entry_options[CONF_PERIOD]
 
     return options
+
+
+def _active_entry_ids(domain_data: dict[str, Any]) -> set[str]:
+    """Retourner les identifiants d'entrée actifs dans hass.data."""
+
+    return {
+        key
+        for key, value in domain_data.items()
+        if key != DATA_SERVICES_REGISTERED and isinstance(value, ConfigEntry)
+    }
+
+
+def _domain_has_config_entries(domain_data: dict[str, Any]) -> bool:
+    """Déterminer s'il reste des entrées configurées dans hass.data."""
+
+    return bool(_active_entry_ids(domain_data))
 
 
 async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None:
@@ -214,13 +252,13 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     options = _get_config_entry_options(hass)
     call_data = dict(call.data)
 
-    default_period = options.get(CONF_PERIOD, DEFAULT_PERIOD)
-    if CONF_PERIOD not in call_data:
-        call_data[CONF_PERIOD] = default_period
+    option_report_type = options.get(CONF_DEFAULT_REPORT_TYPE)
+    if option_report_type not in VALID_PERIODS:
+        option_report_type = None
 
-    period_value = call_data.get(CONF_PERIOD, default_period)
+    period_value = call_data.get(CONF_PERIOD)
     if period_value not in VALID_PERIODS:
-        period_value = DEFAULT_PERIOD
+        period_value = option_report_type or DEFAULT_REPORT_TYPE
 
     period = str(period_value)
     call_data[CONF_PERIOD] = period
@@ -254,6 +292,14 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
     dashboard_label = _format_dashboard_label(selection)
 
+    language = call.data.get(
+        CONF_LANGUAGE, options.get(CONF_LANGUAGE, DEFAULT_LANGUAGE)
+    )
+    if language not in SUPPORTED_LANGUAGES:
+        language = DEFAULT_LANGUAGE
+
+    translations = get_report_translations(language)
+
     pdf_path = await hass.async_add_executor_job(
         _build_pdf,
         metrics,
@@ -270,30 +316,40 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
         period,
 
+        translations,
     )
 
     message_lines = [
-        (
-            "Rapport énergie généré pour la période du "
-            f"{display_start.date().isoformat()} au {display_end.date().isoformat()}."
+        translations.notification_line_period.format(
+            start=display_start.date().isoformat(),
+            end=display_end.date().isoformat(),
         )
     ]
 
     if dashboard_label:
-        message_lines.append(f"Tableau de bord : {dashboard_label}")
+        message_lines.append(
+            translations.notification_line_dashboard.format(
+                dashboard=dashboard_label
+            )
+        )
 
-    message_lines.append(f"Fichier : {pdf_path}")
+    message_lines.append(translations.notification_line_file.format(path=pdf_path))
     message = "\n".join(message_lines)
     persistent_notification.async_create(
         hass,
         message,
-        title="Rapport énergie",
+        title=translations.notification_title,
         notification_id=f"{DOMAIN}_last_report",
     )
     if dashboard_label:
-        _LOGGER.info("Rapport énergie généré (%s): %s", dashboard_label, pdf_path)
+        _LOGGER.info(
+            "Rapport %s généré (%s): %s",
+            translations.language,
+            dashboard_label,
+            pdf_path,
+        )
     else:
-        _LOGGER.info("Rapport énergie généré: %s", pdf_path)
+        _LOGGER.info("Rapport %s généré: %s", translations.language, pdf_path)
 
 
 async def _async_select_dashboard_preferences(
@@ -938,6 +994,25 @@ def _calculate_totals(
     return totals
 
 
+def _discover_logo_candidate(output_dir: Path) -> Path | None:
+    """Rechercher un logo optionnel à intégrer dans la page de garde."""
+
+    candidates: list[Path] = []
+    search_dirs = {output_dir, Path(__file__).resolve().parent}
+
+    parent = output_dir.parent
+    if parent != output_dir:
+        search_dirs.add(parent)
+
+    for directory in search_dirs:
+        for filename in ("logo.png", "logo.jpg", "logo.jpeg"):
+            candidate = directory / filename
+            if candidate.exists():
+                candidates.append(candidate)
+
+    return candidates[0] if candidates else None
+
+
 def _build_pdf(
     metrics: list[MetricDefinition],
     totals: dict[str, float],
@@ -952,6 +1027,8 @@ def _build_pdf(
     dashboard_label: str | None,
 
     period: str,
+
+    translations: ReportTranslations,
 
 ) -> str:
     """Assembler le PDF et le sauvegarder sur disque."""
@@ -992,57 +1069,104 @@ def _build_pdf(
 
     file_path = output_dir / filename
 
-    builder = EnergyPDFBuilder(PDF_TITLE)
-    if dashboard_label:
-        builder.add_paragraph(f"Tableau d'énergie : {dashboard_label}", bold=True)
-    builder.add_paragraph(
-        (
-            "Période analysée : "
-            f"{display_start.strftime('%d/%m/%Y')} → {display_end.strftime('%d/%m/%Y')}"
-        ),
-        bold=True,
+    period_label = f"{display_start.strftime('%d/%m/%Y')} → {display_end.strftime('%d/%m/%Y')}"
+    bucket_label = translations.bucket_labels.get(bucket, bucket)
+    logo_path = _discover_logo_candidate(output_dir)
+    subtitle = translations.cover_subtitle.format(
+        start=display_start.strftime("%d/%m/%Y"),
+        end=display_end.strftime("%d/%m/%Y"),
     )
-    builder.add_paragraph(f"Granularité des statistiques : {bucket}")
-    builder.add_paragraph(
-        f"Rapport généré le : {generated_at.strftime('%d/%m/%Y %H:%M')}"
-    )
-    builder.add_paragraph(
-        "Les totaux représentent la variation relevée dans le tableau de bord"
-        " énergie sur la période sélectionnée."
-    )
-    builder.add_paragraph(
-        "Les valeurs négatives indiquent un flux exporté ou une compensation."
-    )
-    builder.add_paragraph(
-        (
-            "Statistiques incluses selon la configuration du tableau de bord énergie : "
-            f"{len(metrics)}"
-        )
+    builder = EnergyPDFBuilder(
+        translations.pdf_title,
+        period_label=period_label,
+        generated_at=generated_at,
+        translations=translations,
+        logo_path=logo_path,
     )
 
-    summary_rows = _prepare_summary_rows(metrics, totals, metadata)
-    summary_widths = builder.compute_column_widths((0.6, 0.25, 0.15))
+    cover_details = [
+        translations.cover_period.format(period=period_label),
+        translations.cover_bucket.format(bucket=bucket_label),
+        translations.cover_stats.format(count=len(metrics)),
+        translations.cover_generated.format(
+            timestamp=generated_at.strftime("%d/%m/%Y %H:%M")
+        ),
+    ]
+    if dashboard_label:
+        cover_details.insert(
+            1, translations.cover_dashboard.format(dashboard=dashboard_label)
+        )
+
+    builder.add_cover_page(subtitle=subtitle, details=cover_details)
+
+    builder.add_section_title(translations.summary_title)
+    builder.add_paragraph(translations.summary_intro)
+
+    summary_rows, summary_series = _prepare_summary_rows(metrics, totals, metadata)
+    summary_widths = builder.compute_column_widths((0.55, 0.27, 0.18))
     builder.add_table(
         TableConfig(
-            title="Synthèse par catégorie",
-            headers=("Catégorie", "Total", "Unité"),
+            title=translations.summary_table_title,
+            headers=translations.summary_headers,
             rows=summary_rows,
             column_widths=summary_widths,
+            emphasize_rows=list(range(len(summary_rows))),
+            first_column_is_category=True,
         )
     )
+
+    builder.add_paragraph(translations.summary_note_totals)
+    builder.add_paragraph(translations.summary_note_negative)
+
+    builder.add_section_title(translations.detail_title)
+    builder.add_paragraph(translations.detail_intro)
 
     detail_rows = _prepare_detail_rows(metrics, totals, metadata)
-    detail_widths = builder.compute_column_widths((0.26, 0.45, 0.17, 0.12))
+    detail_widths = builder.compute_column_widths((0.26, 0.44, 0.18, 0.12))
     builder.add_table(
         TableConfig(
-            title="Détail des statistiques",
-            headers=("Catégorie", "Statistique", "Total", "Unité"),
+            title=translations.detail_table_title,
+            headers=translations.detail_headers,
             rows=detail_rows,
             column_widths=detail_widths,
+            first_column_is_category=True,
         )
     )
 
-    builder.add_footer(f"Chemin du fichier : {file_path}")
+    if summary_series:
+        builder.add_paragraph(translations.chart_intro)
+        builder.add_chart(translations.chart_title, summary_series)
+
+    builder.add_section_title(translations.conclusion_title)
+
+    if summary_series:
+        units = {unit for _, _, unit in summary_series if unit}
+        unit_label = units.pop() if len(units) == 1 else None
+        total_value = sum(value for _, value, _ in summary_series)
+        formatted_total = _format_number(total_value)
+        if unit_label:
+            formatted_total = f"{formatted_total} {unit_label}"
+        builder.add_paragraph(
+            translations.conclusion_total.format(total=formatted_total),
+            bold=True,
+        )
+
+        dominant_category, dominant_value, dominant_unit = max(
+            summary_series, key=lambda item: abs(item[1])
+        )
+        formatted_dominant = _format_number(dominant_value)
+        if dominant_unit:
+            formatted_dominant = f"{formatted_dominant} {dominant_unit}"
+        builder.add_paragraph(
+            translations.conclusion_dominant.format(
+                category=dominant_category,
+                value=formatted_dominant,
+            )
+        )
+
+    builder.add_paragraph(translations.conclusion_hint)
+
+    builder.add_footer(translations.footer_path.format(path=file_path))
     builder.output(str(file_path))
 
     return str(file_path)
@@ -1052,8 +1176,8 @@ def _prepare_summary_rows(
     metrics: Iterable[MetricDefinition],
     totals: dict[str, float],
     metadata: dict[str, tuple[int, StatisticMetaData]],
-) -> list[tuple[str, str, str]]:
-    """Préparer les lignes du tableau de synthèse."""
+) -> tuple[list[tuple[str, str, str]], list[tuple[str, float, str]]]:
+    """Préparer les lignes du tableau de synthèse et la série pour les graphiques."""
 
     summary: dict[tuple[str, str], float] = defaultdict(float)
 
@@ -1066,14 +1190,17 @@ def _prepare_summary_rows(
         summary[key] += total
 
     rows: list[tuple[str, str, str]] = []
+    series: list[tuple[str, float, str]] = []
     for (category, unit), value in sorted(
         summary.items(), key=lambda item: (-abs(item[1]), item[0])
     ):
         if abs(value) < 1e-6:
             continue
-        rows.append((category, _format_number(value), unit))
+        decorated = _decorate_category(category)
+        rows.append((decorated, _format_number(value), unit))
+        series.append((decorated, value, unit))
 
-    return rows
+    return rows, series
 
 
 def _prepare_detail_rows(
