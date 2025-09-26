@@ -5,7 +5,8 @@
   "documentation": "https://github.com/Villersfr2/ecopilot-pdf-report",
   "issue_tracker": "https://github.com/Villersfr2/ecopilot-pdf-report/issues",
   "requirements": ["fpdf2>=2.8.4"],
-
+  "logo": "logo.png",
+  "icon": "icon.png",
   "codeowners": ["@Villersfr2"],
   "iot_class": "local_polling",
   "config_flow": true
