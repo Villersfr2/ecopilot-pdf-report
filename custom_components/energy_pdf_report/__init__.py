@@ -50,7 +50,9 @@ from .const import (
     VALID_PERIODS,
 )
 from .pdf import EnergyPDFBuilder, TableConfig, _decorate_category
+
 from .translations import ReportTranslations, get_report_translations
+
 
 if TYPE_CHECKING:
     from homeassistant.components.energy.data import EnergyPreferences
@@ -133,9 +135,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Configurer une entrée de configuration."""
 
     domain_data = hass.data.setdefault(DOMAIN, {})
+
     domain_data[entry.entry_id] = entry
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
+
 
     _async_register_services(hass)
 
@@ -180,17 +184,21 @@ def _async_register_services(hass: HomeAssistant) -> None:
     )
 
 
+
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Recharger l'intégration lorsque les options sont mises à jour."""
 
     await hass.config_entries.async_reload(entry.entry_id)
 
 
+
 _ALLOWED_OPTION_KEYS: tuple[str, ...] = (
     CONF_OUTPUT_DIR,
     CONF_FILENAME_PATTERN,
     CONF_DEFAULT_REPORT_TYPE,
+
     CONF_LANGUAGE,
+
 )
 
 
@@ -206,6 +214,7 @@ def _get_config_entry_options(hass: HomeAssistant) -> dict[str, Any]:
     options: dict[str, Any] = {}
     for entry in entries:
         if not active_ids or entry.entry_id in active_ids:
+
             entry_options = entry.options or {}
             for key in _ALLOWED_OPTION_KEYS:
                 if key in entry_options:
@@ -217,6 +226,7 @@ def _get_config_entry_options(hass: HomeAssistant) -> dict[str, Any]:
             ):
                 options[CONF_DEFAULT_REPORT_TYPE] = entry_options[CONF_PERIOD]
 
+
     return options
 
 
@@ -225,8 +235,10 @@ def _active_entry_ids(domain_data: dict[str, Any]) -> set[str]:
 
     return {
         key
+
         for key, value in domain_data.items()
         if key != DATA_SERVICES_REGISTERED and isinstance(value, ConfigEntry)
+
     }
 
 
@@ -252,9 +264,11 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     options = _get_config_entry_options(hass)
     call_data = dict(call.data)
 
+
     option_report_type = options.get(CONF_DEFAULT_REPORT_TYPE)
     if option_report_type not in VALID_PERIODS:
         option_report_type = None
+
 
     period_value = call_data.get(CONF_PERIOD)
     if period_value not in VALID_PERIODS:
@@ -1070,6 +1084,7 @@ def _build_pdf(
     file_path = output_dir / filename
 
     period_label = f"{display_start.strftime('%d/%m/%Y')} → {display_end.strftime('%d/%m/%Y')}"
+
     bucket_label = translations.bucket_labels.get(bucket, bucket)
     logo_path = _discover_logo_candidate(output_dir)
     subtitle = translations.cover_subtitle.format(
@@ -1081,10 +1096,12 @@ def _build_pdf(
         period_label=period_label,
         generated_at=generated_at,
         translations=translations,
+
         logo_path=logo_path,
     )
 
     cover_details = [
+
         translations.cover_period.format(period=period_label),
         translations.cover_bucket.format(bucket=bucket_label),
         translations.cover_stats.format(count=len(metrics)),
@@ -1102,6 +1119,7 @@ def _build_pdf(
     builder.add_section_title(translations.summary_title)
     builder.add_paragraph(translations.summary_intro)
 
+
     summary_rows, summary_series = _prepare_summary_rows(metrics, totals, metadata)
     summary_widths = builder.compute_column_widths((0.55, 0.27, 0.18))
     builder.add_table(
@@ -1111,6 +1129,7 @@ def _build_pdf(
             rows=summary_rows,
             column_widths=summary_widths,
             emphasize_rows=list(range(len(summary_rows))),
+
             first_column_is_category=True,
         )
     )
@@ -1120,6 +1139,7 @@ def _build_pdf(
 
     builder.add_section_title(translations.detail_title)
     builder.add_paragraph(translations.detail_intro)
+
 
     detail_rows = _prepare_detail_rows(metrics, totals, metadata)
     detail_widths = builder.compute_column_widths((0.26, 0.44, 0.18, 0.12))
@@ -1134,10 +1154,12 @@ def _build_pdf(
     )
 
     if summary_series:
+
         builder.add_paragraph(translations.chart_intro)
         builder.add_chart(translations.chart_title, summary_series)
 
     builder.add_section_title(translations.conclusion_title)
+
 
     if summary_series:
         units = {unit for _, _, unit in summary_series if unit}
@@ -1147,7 +1169,9 @@ def _build_pdf(
         if unit_label:
             formatted_total = f"{formatted_total} {unit_label}"
         builder.add_paragraph(
+
             translations.conclusion_total.format(total=formatted_total),
+
             bold=True,
         )
 
@@ -1158,6 +1182,7 @@ def _build_pdf(
         if dominant_unit:
             formatted_dominant = f"{formatted_dominant} {dominant_unit}"
         builder.add_paragraph(
+
             translations.conclusion_dominant.format(
                 category=dominant_category,
                 value=formatted_dominant,
@@ -1167,6 +1192,7 @@ def _build_pdf(
     builder.add_paragraph(translations.conclusion_hint)
 
     builder.add_footer(translations.footer_path.format(path=file_path))
+
     builder.output(str(file_path))
 
     return str(file_path)
