@@ -10,10 +10,18 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
+    CONF_CO2_ELECTRICITY,
+    CONF_CO2_GAS,
+    CONF_CO2_SAVINGS,
+    CONF_CO2_WATER,
     CONF_DEFAULT_REPORT_TYPE,
     CONF_FILENAME_PATTERN,
     CONF_OUTPUT_DIR,
     CONF_LANGUAGE,
+    DEFAULT_CO2_ELECTRICITY_SENSOR,
+    DEFAULT_CO2_GAS_SENSOR,
+    DEFAULT_CO2_SAVINGS_SENSOR,
+    DEFAULT_CO2_WATER_SENSOR,
     DEFAULT_FILENAME_PATTERN,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_REPORT_TYPE,
@@ -49,6 +57,10 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_FILENAME_PATTERN, default=DEFAULT_FILENAME_PATTERN): cv.string,
                 vol.Required(CONF_DEFAULT_REPORT_TYPE, default=DEFAULT_REPORT_TYPE): vol.In(VALID_REPORT_TYPES),
                 vol.Required(CONF_LANGUAGE, default=DEFAULT_LANGUAGE): vol.In(SUPPORTED_LANGUAGES),
+                vol.Required(CONF_CO2_ELECTRICITY, default=DEFAULT_CO2_ELECTRICITY_SENSOR): cv.entity_id,
+                vol.Required(CONF_CO2_GAS, default=DEFAULT_CO2_GAS_SENSOR): cv.entity_id,
+                vol.Required(CONF_CO2_WATER, default=DEFAULT_CO2_WATER_SENSOR): cv.entity_id,
+                vol.Required(CONF_CO2_SAVINGS, default=DEFAULT_CO2_SAVINGS_SENSOR): cv.entity_id,
             }
         )
 
@@ -71,6 +83,7 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
 
         data = dict(self.config_entry.data)  # 👉 récupérer les valeurs de base
+        data.update(self.config_entry.options)
 
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
@@ -81,6 +94,10 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Required(CONF_FILENAME_PATTERN, default=data.get(CONF_FILENAME_PATTERN, DEFAULT_FILENAME_PATTERN)): cv.string,
                 vol.Required(CONF_DEFAULT_REPORT_TYPE, default=data.get(CONF_DEFAULT_REPORT_TYPE, DEFAULT_REPORT_TYPE)): vol.In(VALID_REPORT_TYPES),
                 vol.Required(CONF_LANGUAGE, default=data.get(CONF_LANGUAGE, DEFAULT_LANGUAGE)): vol.In(SUPPORTED_LANGUAGES),
+                vol.Required(CONF_CO2_ELECTRICITY, default=data.get(CONF_CO2_ELECTRICITY, DEFAULT_CO2_ELECTRICITY_SENSOR)): cv.entity_id,
+                vol.Required(CONF_CO2_GAS, default=data.get(CONF_CO2_GAS, DEFAULT_CO2_GAS_SENSOR)): cv.entity_id,
+                vol.Required(CONF_CO2_WATER, default=data.get(CONF_CO2_WATER, DEFAULT_CO2_WATER_SENSOR)): cv.entity_id,
+                vol.Required(CONF_CO2_SAVINGS, default=data.get(CONF_CO2_SAVINGS, DEFAULT_CO2_SAVINGS_SENSOR)): cv.entity_id,
             }
         )
 
