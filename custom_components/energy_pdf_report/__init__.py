@@ -1072,12 +1072,21 @@ async def _collect_co2_statistics(
             if not definition:
                 continue
 
-            total = 0.0
+            daily_snapshots: dict[date, tuple[datetime, float]] = {}
+
             for state in states:
                 value = _safe_float(state.state)
                 if value is None:
                     continue
-                total += value
+
+                local_changed = dt_util.as_local(state.last_changed)
+                day_key = local_changed.date()
+                previous = daily_snapshots.get(day_key)
+
+                if previous is None or local_changed >= previous[0]:
+                    daily_snapshots[day_key] = (local_changed, value)
+
+            total = sum(snapshot[1] for snapshot in daily_snapshots.values())
 
             results[definition.translation_key] = total
 
