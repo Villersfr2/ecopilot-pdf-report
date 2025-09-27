@@ -33,6 +33,14 @@ class ReportTranslations:
     chart_intro: str
     chart_title: str
     chart_units: str
+    co2_section_title: str
+    co2_section_intro: str
+    co2_table_title: str
+    co2_table_headers: tuple[str, str, str]
+    co2_emission_label: str
+    co2_savings_label: str
+    co2_balance_sentence: str
+    co2_sensor_labels: Mapping[str, str]
     conclusion_title: str
     conclusion_total: str
     conclusion_dominant: str
@@ -72,6 +80,19 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         chart_intro="La visualisation suivante met en avant la répartition des flux pour chaque catégorie suivie et matérialise l'équilibre production / consommation.",
         chart_title="Répartition par catégorie",
         chart_units="Unités : {unit}",
+        co2_section_title="CO₂",
+        co2_section_intro="Cette section met en lumière les émissions et économies de CO₂ enregistrées par les différents postes.",
+        co2_table_title="Émissions et économies de CO₂",
+        co2_table_headers=("Source", "Total (kgCO₂e)", "Impact"),
+        co2_emission_label="Émission",
+        co2_savings_label="Économie",
+        co2_balance_sentence="Émissions totales : {emissions} • Économies : {savings} • Bilan net : {balance}.",
+        co2_sensor_labels={
+            "co2_electricity": "Électricité",
+            "co2_mazout": "Mazout",
+            "co2_water": "Eau chaude sanitaire",
+            "co2_savings": "Économies / compensation",
+        },
         conclusion_title="Conclusion",
         conclusion_total="Le flux net observé sur la période atteint {total}.",
         conclusion_dominant="La catégorie la plus significative est {category} avec {value}.",
@@ -109,6 +130,19 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         chart_intro="The following chart highlights the distribution of flows per category and illustrates the production versus consumption balance.",
         chart_title="Breakdown by category",
         chart_units="Units: {unit}",
+        co2_section_title="CO₂",
+        co2_section_intro="This section summarises the CO₂ emissions and savings reported by your sensors.",
+        co2_table_title="CO₂ emissions and savings",
+        co2_table_headers=("Source", "Total (kgCO₂e)", "Impact"),
+        co2_emission_label="Emission",
+        co2_savings_label="Saving",
+        co2_balance_sentence="Total emissions: {emissions} • Savings: {savings} • Net balance: {balance}.",
+        co2_sensor_labels={
+            "co2_electricity": "Electricity",
+            "co2_mazout": "Heating oil",
+            "co2_water": "Domestic hot water",
+            "co2_savings": "Savings / offset",
+        },
         conclusion_title="Conclusion",
         conclusion_total="The net flow observed over the period is {total}.",
         conclusion_dominant="The most significant category is {category} with {value}.",
@@ -146,6 +180,19 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         chart_intro="De volgende visualisatie toont de verdeling van de stromen per categorie en beeldt het evenwicht tussen productie en verbruik uit.",
         chart_title="Verdeling per categorie",
         chart_units="Eenheden: {unit}",
+        co2_section_title="CO₂",
+        co2_section_intro="Deze sectie toont de door uw sensoren geregistreerde CO₂-uitstoot en besparingen.",
+        co2_table_title="CO₂-uitstoot en besparingen",
+        co2_table_headers=("Bron", "Totaal (kgCO₂e)", "Impact"),
+        co2_emission_label="Uitstoot",
+        co2_savings_label="Besparing",
+        co2_balance_sentence="Totale uitstoot: {emissions} • Besparingen: {savings} • Nettoresultaat: {balance}.",
+        co2_sensor_labels={
+            "co2_electricity": "Elektriciteit",
+            "co2_mazout": "Stookolie",
+            "co2_water": "Sanitair warm water",
+            "co2_savings": "Besparingen / compensatie",
+        },
         conclusion_title="Conclusie",
         conclusion_total="De netto stroom over de periode bedraagt {total}.",
         conclusion_dominant="De meest bepalende categorie is {category} met {value}.",
