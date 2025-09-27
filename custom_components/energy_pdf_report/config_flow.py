@@ -6,7 +6,10 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.data_entry_flow import FlowResult
+try:
+    from homeassistant.data_entry_flow import FlowResult
+except ImportError:  # pragma: no cover - compat with older versions
+    FlowResult = dict[str, Any]
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
