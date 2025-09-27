@@ -16,6 +16,7 @@ from typing import Any, Iterable, TYPE_CHECKING
 import voluptuous as vol
 
 from homeassistant.components import persistent_notification, recorder
+from homeassistant.components.recorder import history as recorder_history
 from homeassistant.components.recorder import statistics as recorder_statistics
 from homeassistant.components.recorder.models.statistics import StatisticMetaData
 from homeassistant.components.recorder.statistics import StatisticsRow
@@ -86,6 +87,16 @@ class MetricDefinition:
 
     category: str
     statistic_id: str
+
+
+
+@dataclass(frozen=True, slots=True)
+class CO2SensorDefinition:
+    """Décrit un capteur CO₂ suivi dans le rapport."""
+
+    entity_id: str
+    translation_key: str
+    is_saving: bool
 
 
 
@@ -202,6 +213,30 @@ _ALLOWED_OPTION_KEYS: tuple[str, ...] = (
 )
 
 
+CO2_SENSOR_DEFINITIONS: tuple[CO2SensorDefinition, ...] = (
+    CO2SensorDefinition(
+        "sensor.co2_scope_2_electricite_co2_prod_daily_precis",
+        "co2_electricity",
+        False,
+    ),
+    CO2SensorDefinition(
+        "sensor.co2_gaz_jour",
+        "co2_gas",
+        False,
+    ),
+    CO2SensorDefinition(
+        "sensor.co2_eau_jour",
+        "co2_water",
+        False,
+    ),
+    CO2SensorDefinition(
+        "sensor.co2_savings_today",
+        "co2_savings",
+        True,
+    ),
+)
+
+
 def _get_config_entry_options(hass: HomeAssistant) -> dict[str, Any]:
     """Fusionner data et options des entrées actives."""
 
@@ -293,6 +328,13 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     stats_map, metadata = await _collect_statistics(hass, metrics, start, end, bucket)
     totals = _calculate_totals(metrics, stats_map)
 
+    co2_totals = await _collect_co2_statistics(
+        hass,
+        start,
+        end,
+        CO2_SENSOR_DEFINITIONS,
+    )
+
     output_dir_input = call.data.get(
         CONF_OUTPUT_DIR, options.get(CONF_OUTPUT_DIR, DEFAULT_OUTPUT_DIR)
     )
@@ -335,6 +377,9 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
         period,
 
         translations,
+
+        CO2_SENSOR_DEFINITIONS,
+        co2_totals,
     )
 
     message_lines = [
@@ -944,6 +989,91 @@ async def _collect_statistics(
     return stats_map, metadata
 
 
+async def _collect_co2_statistics(
+    hass: HomeAssistant,
+    start: datetime,
+    end: datetime,
+    sensors: Iterable[CO2SensorDefinition],
+) -> dict[str, float]:
+    """Assembler les totaux CO₂ sur la période demandée."""
+
+    definitions = list(sensors)
+    results: dict[str, float] = {
+        definition.translation_key: 0.0 for definition in definitions
+    }
+
+    if not definitions:
+        return results
+
+    entity_map = {definition.entity_id: definition for definition in definitions}
+    statistic_ids = list(entity_map)
+
+    instance = recorder.get_instance(hass)
+
+    stats_map = await instance.async_add_executor_job(
+        recorder_statistics.statistics_during_period,
+        hass,
+        start,
+        end,
+        statistic_ids,
+        "day",
+        None,
+        {"sum"},
+    )
+
+    need_history: list[str] = []
+
+    for entity_id in statistic_ids:
+        rows = stats_map.get(entity_id)
+        if not rows:
+            need_history.append(entity_id)
+            continue
+
+        total = 0.0
+        has_sum = False
+        for row in rows:
+            sum_value = row.get("sum")
+            if sum_value is None:
+                continue
+            has_sum = True
+            total += float(sum_value)
+
+        if has_sum:
+            definition = entity_map[entity_id]
+            results[definition.translation_key] = total
+        else:
+            need_history.append(entity_id)
+
+    if need_history:
+        for entity_id in need_history:
+            history_map = await instance.async_add_executor_job(
+                recorder_history.state_changes_during_period,
+                hass,
+                start,
+                end,
+                entity_id,
+            )
+
+            states = history_map.get(entity_id)
+            if not states:
+                continue
+
+            definition = entity_map.get(entity_id)
+            if not definition:
+                continue
+
+            total = 0.0
+            for state in states:
+                value = _safe_float(state.state)
+                if value is None:
+                    continue
+                total += value
+
+            results[definition.translation_key] = total
+
+    return results
+
+
 def _get_recorder_metadata_with_hass(
     hass: HomeAssistant,
     statistic_ids: set[str],
@@ -1047,6 +1177,9 @@ def _build_pdf(
     period: str,
 
     translations: ReportTranslations,
+
+    co2_definitions: Iterable[CO2SensorDefinition],
+    co2_totals: dict[str, float],
 
 ) -> str:
     """Assembler le PDF et le sauvegarder sur disque."""
@@ -1162,6 +1295,56 @@ def _build_pdf(
         builder.add_paragraph(translations.chart_intro)
         builder.add_chart(translations.chart_title, summary_series)
 
+    totals_map = co2_totals or {}
+    builder.add_section_title(translations.co2_section_title)
+    builder.add_paragraph(translations.co2_section_intro)
+
+    co2_rows: list[tuple[str, str, str]] = []
+    emissions_total = 0.0
+    savings_total = 0.0
+
+    for definition in co2_definitions:
+        value = totals_map.get(definition.translation_key)
+        if value is None:
+            continue
+
+        label = translations.co2_sensor_labels.get(
+            definition.translation_key, definition.translation_key
+        )
+        formatted_value = _format_number(value)
+        impact_label = (
+            translations.co2_savings_label
+            if definition.is_saving
+            else translations.co2_emission_label
+        )
+        co2_rows.append((label, f"{formatted_value} kgCO₂e", impact_label))
+
+        if definition.is_saving:
+            savings_total += value
+        else:
+            emissions_total += value
+
+    co2_widths = builder.compute_column_widths((0.5, 0.28, 0.22))
+    builder.add_table(
+        TableConfig(
+            title=translations.co2_table_title,
+            headers=translations.co2_table_headers,
+            rows=co2_rows,
+            column_widths=co2_widths,
+        )
+    )
+
+    if co2_rows:
+        balance = emissions_total - savings_total
+        builder.add_paragraph(
+            translations.co2_balance_sentence.format(
+                emissions=f"{_format_number(emissions_total)} kgCO₂e",
+                savings=f"{_format_number(savings_total)} kgCO₂e",
+                balance=f"{_format_number(balance)} kgCO₂e",
+            ),
+            bold=True,
+        )
+
     builder.add_section_title(translations.conclusion_title)
 
 
@@ -1273,6 +1456,15 @@ def _extract_name(
     if metadata and metadata[1].get("name"):
         return str(metadata[1]["name"])
     return fallback
+
+
+def _safe_float(value: Any) -> float | None:
+    """Convertir une valeur en flottant si possible."""
+
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _format_number(value: float) -> str:
