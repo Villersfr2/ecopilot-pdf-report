@@ -3,20 +3,18 @@
     "step": {
       "user": {
         "data": {
-          "output_dir": "Output directory",
-          "filename_pattern": "Filename pattern",
-          "default_report_type": "Default report type",
-          "language": "Report language",
-          "co2_electricity_sensor": "Electricity CO₂ sensor",
-          "co2_gas_sensor": "Gas CO₂ sensor",
-          "co2_water_sensor": "Water CO₂ sensor",
-          "co2_savings_sensor": "Savings CO₂ sensor"
+
+          "co2_sensor_electricity": "Electricity CO₂ sensor",
+          "co2_sensor_gas": "Gas CO₂ sensor",
+          "co2_sensor_water": "Water CO₂ sensor",
+          "co2_sensor_savings": "Savings CO₂ sensor"
         },
         "data_description": {
-          "co2_electricity_sensor": "Entity ID of the sensor providing CO₂ emissions linked to electricity consumption.",
-          "co2_gas_sensor": "Entity ID of the sensor providing CO₂ emissions linked to gas usage.",
-          "co2_water_sensor": "Entity ID of the sensor providing CO₂ emissions linked to water consumption.",
-          "co2_savings_sensor": "Entity ID of the sensor tracking avoided CO₂ emissions (savings). Leave empty to hide the row."
+          "co2_sensor_electricity": "Entity ID providing electricity emissions statistics (default: sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
+          "co2_sensor_gas": "Entity ID providing gas emissions statistics (default: sensor.co2_gaz_jour).",
+          "co2_sensor_water": "Entity ID providing water emissions statistics (default: sensor.co2_eau_jour).",
+          "co2_sensor_savings": "Entity ID providing CO₂ savings statistics (default: sensor.co2_savings_today)."
+
         }
       },
       "reinstall_confirm": {
@@ -29,27 +27,24 @@
       "already_configured": "Energy PDF Report is already configured."
     }
   },
-
   "options": {
     "step": {
       "init": {
         "title": "Energy PDF Report options",
         "description": "Configure the default output directory, reporting period and filename pattern used when generating PDFs.",
         "data": {
-          "output_dir": "Output directory",
-          "filename_pattern": "Filename pattern",
-          "default_report_type": "Default report type",
-          "language": "Report language",
-          "co2_electricity_sensor": "Electricity CO₂ sensor",
-          "co2_gas_sensor": "Gas CO₂ sensor",
-          "co2_water_sensor": "Water CO₂ sensor",
-          "co2_savings_sensor": "Savings CO₂ sensor"
+
+          "co2_sensor_electricity": "Electricity CO₂ sensor",
+          "co2_sensor_gas": "Gas CO₂ sensor",
+          "co2_sensor_water": "Water CO₂ sensor",
+          "co2_sensor_savings": "Savings CO₂ sensor"
         },
         "data_description": {
-          "co2_electricity_sensor": "Entity ID of the sensor providing CO₂ emissions linked to electricity consumption.",
-          "co2_gas_sensor": "Entity ID of the sensor providing CO₂ emissions linked to gas usage.",
-          "co2_water_sensor": "Entity ID of the sensor providing CO₂ emissions linked to water consumption.",
-          "co2_savings_sensor": "Entity ID of the sensor tracking avoided CO₂ emissions (savings). Leave empty to hide the row."
+          "co2_sensor_electricity": "Entity ID providing electricity emissions statistics (default: sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
+          "co2_sensor_gas": "Entity ID providing gas emissions statistics (default: sensor.co2_gaz_jour).",
+          "co2_sensor_water": "Entity ID providing water emissions statistics (default: sensor.co2_eau_jour).",
+          "co2_sensor_savings": "Entity ID providing CO₂ savings statistics (default: sensor.co2_savings_today)."
+
         }
       }
     }

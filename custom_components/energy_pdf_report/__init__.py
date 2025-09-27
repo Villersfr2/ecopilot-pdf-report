@@ -32,10 +32,12 @@ from homeassistant.util import dt as dt_util
 from homeassistant.components.energy.data import async_get_manager
 
 from .const import (
-    CONF_CO2_ELECTRICITY_SENSOR,
-    CONF_CO2_GAS_SENSOR,
-    CONF_CO2_SAVINGS_SENSOR,
-    CONF_CO2_WATER_SENSOR,
+
+    CONF_CO2_ELECTRICITY,
+    CONF_CO2_GAS,
+    CONF_CO2_SAVINGS,
+    CONF_CO2_WATER,
+
     CONF_DASHBOARD,
     CONF_DEFAULT_REPORT_TYPE,
     CONF_END_DATE,
@@ -218,80 +220,69 @@ _ALLOWED_OPTION_KEYS: tuple[str, ...] = (
 
     CONF_LANGUAGE,
 
-    CONF_CO2_ELECTRICITY_SENSOR,
-    CONF_CO2_GAS_SENSOR,
-    CONF_CO2_WATER_SENSOR,
-    CONF_CO2_SAVINGS_SENSOR,
+
+    CONF_CO2_ELECTRICITY,
+    CONF_CO2_GAS,
+    CONF_CO2_WATER,
+    CONF_CO2_SAVINGS,
 
 )
 
 
-def _coerce_entity_id(value: Any) -> str | None:
-    """Valider et normaliser un entity_id fourni par l'utilisateur."""
+CO2_SENSOR_DEFINITIONS: tuple[CO2SensorDefinition, ...] = (
+    CO2SensorDefinition(
+        DEFAULT_CO2_ELECTRICITY_SENSOR,
+        "co2_electricity",
+        False,
+    ),
+    CO2SensorDefinition(
+        DEFAULT_CO2_GAS_SENSOR,
+        "co2_gas",
+        False,
+    ),
+    CO2SensorDefinition(
+        DEFAULT_CO2_WATER_SENSOR,
+        "co2_water",
+        False,
+    ),
+    CO2SensorDefinition(
+        DEFAULT_CO2_SAVINGS_SENSOR,
+        "co2_savings",
+        True,
+    ),
+)
 
-    if not isinstance(value, str):
-        return None
 
-    candidate = value.strip()
-    if not candidate:
-        return None
-
-    try:
-        return cv.entity_id(candidate)
-    except vol.Invalid:
-        _LOGGER.debug("Entity ID invalide ignoré pour le rapport CO₂: %s", candidate)
-        return None
+_CO2_SENSOR_OPTION_DEFAULTS: tuple[tuple[str, str], ...] = (
+    (CONF_CO2_ELECTRICITY, DEFAULT_CO2_ELECTRICITY_SENSOR),
+    (CONF_CO2_GAS, DEFAULT_CO2_GAS_SENSOR),
+    (CONF_CO2_WATER, DEFAULT_CO2_WATER_SENSOR),
+    (CONF_CO2_SAVINGS, DEFAULT_CO2_SAVINGS_SENSOR),
+)
 
 
 def _build_co2_sensor_definitions(
     options: Mapping[str, Any]
 ) -> tuple[CO2SensorDefinition, ...]:
-    """Construire les définitions de capteurs CO₂ à partir de la configuration."""
-
-    sensor_sources = (
-        (
-            CONF_CO2_ELECTRICITY_SENSOR,
-            DEFAULT_CO2_ELECTRICITY_SENSOR,
-            "co2_electricity",
-            False,
-        ),
-        (
-            CONF_CO2_GAS_SENSOR,
-            DEFAULT_CO2_GAS_SENSOR,
-            "co2_gas",
-            False,
-        ),
-        (
-            CONF_CO2_WATER_SENSOR,
-            DEFAULT_CO2_WATER_SENSOR,
-            "co2_water",
-            False,
-        ),
-        (
-            CONF_CO2_SAVINGS_SENSOR,
-            DEFAULT_CO2_SAVINGS_SENSOR,
-            "co2_savings",
-            True,
-        ),
-    )
+    """Return CO₂ sensor definitions, including user overrides."""
 
     definitions: list[CO2SensorDefinition] = []
 
-    for option_key, default_entity, translation_key, is_saving in sensor_sources:
-        configured_entity = options.get(option_key)
-
-        entity_id = _coerce_entity_id(configured_entity)
-        if entity_id is None:
-            entity_id = _coerce_entity_id(default_entity)
-
-        if entity_id is None:
-            continue
+    for base_definition, (option_key, default_entity) in zip(
+        CO2_SENSOR_DEFINITIONS, _CO2_SENSOR_OPTION_DEFAULTS, strict=True
+    ):
+        override = options.get(option_key)
+        entity_id = (
+            override.strip()
+            if isinstance(override, str) and override.strip()
+            else default_entity
+        )
 
         definitions.append(
             CO2SensorDefinition(
                 entity_id,
-                translation_key,
-                is_saving,
+                base_definition.translation_key,
+                base_definition.is_saving,
             )
         )
 

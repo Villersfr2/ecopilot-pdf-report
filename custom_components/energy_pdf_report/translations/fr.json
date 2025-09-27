@@ -1,23 +1,20 @@
 {
-
   "config": {
     "step": {
       "user": {
         "data": {
-          "output_dir": "Répertoire de sortie",
-          "filename_pattern": "Modèle de nom de fichier",
-          "default_report_type": "Type de rapport par défaut",
-          "language": "Langue du rapport",
-          "co2_electricity_sensor": "Capteur CO₂ électricité",
-          "co2_gas_sensor": "Capteur CO₂ gaz",
-          "co2_water_sensor": "Capteur CO₂ eau",
-          "co2_savings_sensor": "Capteur CO₂ économies"
+
+          "co2_sensor_electricity": "Capteur CO₂ électricité",
+          "co2_sensor_gas": "Capteur CO₂ gaz",
+          "co2_sensor_water": "Capteur CO₂ eau",
+          "co2_sensor_savings": "Capteur économies de CO₂"
         },
         "data_description": {
-          "co2_electricity_sensor": "Identifiant de l'entité qui fournit les émissions de CO₂ liées à la consommation d'électricité.",
-          "co2_gas_sensor": "Identifiant de l'entité qui fournit les émissions de CO₂ liées à l'utilisation du gaz.",
-          "co2_water_sensor": "Identifiant de l'entité qui fournit les émissions de CO₂ liées à la consommation d'eau.",
-          "co2_savings_sensor": "Identifiant de l'entité qui suit les émissions de CO₂ évitées (économies). Laissez vide pour masquer la ligne."
+          "co2_sensor_electricity": "Identifiant de l'entité fournissant les émissions d'électricité (par défaut : sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
+          "co2_sensor_gas": "Identifiant de l'entité fournissant les émissions de gaz (par défaut : sensor.co2_gaz_jour).",
+          "co2_sensor_water": "Identifiant de l'entité fournissant les émissions liées à l'eau (par défaut : sensor.co2_eau_jour).",
+          "co2_sensor_savings": "Identifiant de l'entité indiquant les économies de CO₂ (par défaut : sensor.co2_savings_today)."
+
         }
       },
       "reinstall_confirm": {
@@ -30,28 +27,23 @@
       "already_configured": "Energy PDF Report est déjà configuré."
     }
   },
-
   "options": {
     "step": {
       "init": {
-
         "title": "Options du rapport PDF énergie",
         "description": "Définissez le répertoire de sortie, la période par défaut et le modèle de nom de fichier utilisés lors de la génération des PDF.",
         "data": {
-          "output_dir": "Répertoire de sortie",
-          "filename_pattern": "Modèle de nom de fichier",
-          "default_report_type": "Type de rapport par défaut",
-          "language": "Langue du rapport",
-          "co2_electricity_sensor": "Capteur CO₂ électricité",
-          "co2_gas_sensor": "Capteur CO₂ gaz",
-          "co2_water_sensor": "Capteur CO₂ eau",
-          "co2_savings_sensor": "Capteur CO₂ économies"
+
+          "co2_sensor_electricity": "Capteur CO₂ électricité",
+          "co2_sensor_gas": "Capteur CO₂ gaz",
+          "co2_sensor_water": "Capteur CO₂ eau",
+          "co2_sensor_savings": "Capteur économies de CO₂"
         },
         "data_description": {
-          "co2_electricity_sensor": "Identifiant de l'entité qui fournit les émissions de CO₂ liées à la consommation d'électricité.",
-          "co2_gas_sensor": "Identifiant de l'entité qui fournit les émissions de CO₂ liées à l'utilisation du gaz.",
-          "co2_water_sensor": "Identifiant de l'entité qui fournit les émissions de CO₂ liées à la consommation d'eau.",
-          "co2_savings_sensor": "Identifiant de l'entité qui suit les émissions de CO₂ évitées (économies). Laissez vide pour masquer la ligne."
+          "co2_sensor_electricity": "Identifiant de l'entité fournissant les émissions d'électricité (par défaut : sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
+          "co2_sensor_gas": "Identifiant de l'entité fournissant les émissions de gaz (par défaut : sensor.co2_gaz_jour).",
+          "co2_sensor_water": "Identifiant de l'entité fournissant les émissions liées à l'eau (par défaut : sensor.co2_eau_jour).",
+          "co2_sensor_savings": "Identifiant de l'entité indiquant les économies de CO₂ (par défaut : sensor.co2_savings_today)."
         }
 
       }
