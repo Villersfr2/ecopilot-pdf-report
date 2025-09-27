@@ -58,7 +58,7 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             return self.async_create_entry(
-                title="Rapport PDF Énergie",
+                title="Energy PDF Report",
                 data=user_input,  # 👉 valeurs stockées directement dans data
             )
 
