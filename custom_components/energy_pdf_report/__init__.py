@@ -215,22 +215,28 @@ _ALLOWED_OPTION_KEYS: tuple[str, ...] = (
 
 CO2_SENSOR_DEFINITIONS: tuple[CO2SensorDefinition, ...] = (
     CO2SensorDefinition(
-        "sensor.ecopilot_co2_electricity",
+
+        "sensor.co2_scope_2_electricite_co2_prod_daily_precis",
+
         "co2_electricity",
         False,
     ),
     CO2SensorDefinition(
-        "sensor.ecopilot_co2_mazout",
-        "co2_mazout",
+
+        "sensor.co2_gaz_jour",
+        "co2_gas",
         False,
     ),
     CO2SensorDefinition(
-        "sensor.ecopilot_co2_water",
+        "sensor.co2_eau_jour",
+
         "co2_water",
         False,
     ),
     CO2SensorDefinition(
-        "sensor.ecopilot_co2_savings",
+
+        "sensor.co2_savings_today",
+
         "co2_savings",
         True,
     ),
@@ -1045,10 +1051,10 @@ async def _collect_co2_statistics(
             need_history.append(entity_id)
 
     if need_history:
-        history_map: dict[str, list[Any]] = defaultdict(list)
 
         for entity_id in need_history:
-            entity_history = await instance.async_add_executor_job(
+            history_map = await instance.async_add_executor_job(
+
                 recorder_history.state_changes_during_period,
                 hass,
                 start,
@@ -1056,10 +1062,12 @@ async def _collect_co2_statistics(
                 entity_id,
             )
 
-            for history_entity_id, states in entity_history.items():
-                history_map[history_entity_id].extend(states)
 
-        for entity_id, states in history_map.items():
+            states = history_map.get(entity_id)
+            if not states:
+                continue
+
+
             definition = entity_map.get(entity_id)
             if not definition:
                 continue
