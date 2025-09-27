@@ -1045,13 +1045,19 @@ async def _collect_co2_statistics(
             need_history.append(entity_id)
 
     if need_history:
-        history_map = await instance.async_add_executor_job(
-            recorder_history.state_changes_during_period,
-            hass,
-            start,
-            end,
-            need_history,
-        )
+        history_map: dict[str, list[Any]] = defaultdict(list)
+
+        for entity_id in need_history:
+            entity_history = await instance.async_add_executor_job(
+                recorder_history.state_changes_during_period,
+                hass,
+                start,
+                end,
+                entity_id,
+            )
+
+            for history_entity_id, states in entity_history.items():
+                history_map[history_entity_id].extend(states)
 
         for entity_id, states in history_map.items():
             definition = entity_map.get(entity_id)
