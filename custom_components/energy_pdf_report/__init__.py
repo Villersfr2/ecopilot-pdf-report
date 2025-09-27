@@ -213,51 +213,43 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 
 
-_ALLOWED_OPTION_KEYS: tuple[str, ...] = (
+CO2_SENSOR_CONFIG: tuple[tuple[str, str, bool, str], ...] = (
+    (
+        CONF_CO2_ELECTRICITY,
+        "co2_electricity",
+        False,
+        DEFAULT_CO2_ELECTRICITY_SENSOR,
+    ),
+    (
+        CONF_CO2_GAS,
+        "co2_gas",
+        False,
+        DEFAULT_CO2_GAS_SENSOR,
+    ),
+    (
+        CONF_CO2_WATER,
+        "co2_water",
+        False,
+        DEFAULT_CO2_WATER_SENSOR,
+    ),
+    (
+        CONF_CO2_SAVINGS,
+        "co2_savings",
+        True,
+        DEFAULT_CO2_SAVINGS_SENSOR,
+    ),
+)
+
+
+_BASE_ALLOWED_OPTION_KEYS: tuple[str, ...] = (
     CONF_OUTPUT_DIR,
     CONF_FILENAME_PATTERN,
     CONF_DEFAULT_REPORT_TYPE,
-
     CONF_LANGUAGE,
-
-
-    CONF_CO2_ELECTRICITY,
-    CONF_CO2_GAS,
-    CONF_CO2_WATER,
-    CONF_CO2_SAVINGS,
-
 )
 
-
-CO2_SENSOR_DEFINITIONS: tuple[CO2SensorDefinition, ...] = (
-    CO2SensorDefinition(
-        DEFAULT_CO2_ELECTRICITY_SENSOR,
-        "co2_electricity",
-        False,
-    ),
-    CO2SensorDefinition(
-        DEFAULT_CO2_GAS_SENSOR,
-        "co2_gas",
-        False,
-    ),
-    CO2SensorDefinition(
-        DEFAULT_CO2_WATER_SENSOR,
-        "co2_water",
-        False,
-    ),
-    CO2SensorDefinition(
-        DEFAULT_CO2_SAVINGS_SENSOR,
-        "co2_savings",
-        True,
-    ),
-)
-
-
-_CO2_SENSOR_OPTION_DEFAULTS: tuple[tuple[str, str], ...] = (
-    (CONF_CO2_ELECTRICITY, DEFAULT_CO2_ELECTRICITY_SENSOR),
-    (CONF_CO2_GAS, DEFAULT_CO2_GAS_SENSOR),
-    (CONF_CO2_WATER, DEFAULT_CO2_WATER_SENSOR),
-    (CONF_CO2_SAVINGS, DEFAULT_CO2_SAVINGS_SENSOR),
+_ALLOWED_OPTION_KEYS: tuple[str, ...] = _BASE_ALLOWED_OPTION_KEYS + tuple(
+    option_key for option_key, *_ in CO2_SENSOR_CONFIG
 )
 
 
@@ -268,9 +260,7 @@ def _build_co2_sensor_definitions(
 
     definitions: list[CO2SensorDefinition] = []
 
-    for base_definition, (option_key, default_entity) in zip(
-        CO2_SENSOR_DEFINITIONS, _CO2_SENSOR_OPTION_DEFAULTS, strict=True
-    ):
+    for option_key, translation_key, is_saving, default_entity in CO2_SENSOR_CONFIG:
         override = options.get(option_key)
         entity_id = (
             override.strip()
@@ -279,11 +269,7 @@ def _build_co2_sensor_definitions(
         )
 
         definitions.append(
-            CO2SensorDefinition(
-                entity_id,
-                base_definition.translation_key,
-                base_definition.is_saving,
-            )
+            CO2SensorDefinition(entity_id, translation_key, is_saving)
         )
 
     return tuple(definitions)

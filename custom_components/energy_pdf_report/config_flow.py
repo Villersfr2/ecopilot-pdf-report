@@ -13,12 +13,10 @@ except ImportError:  # pragma: no cover - compat with older versions
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
-
     CONF_CO2_ELECTRICITY,
     CONF_CO2_GAS,
     CONF_CO2_SAVINGS,
     CONF_CO2_WATER,
-
     CONF_DEFAULT_REPORT_TYPE,
     CONF_FILENAME_PATTERN,
     CONF_OUTPUT_DIR,
@@ -34,6 +32,13 @@ from .const import (
     DOMAIN,
     VALID_REPORT_TYPES,
     SUPPORTED_LANGUAGES,
+)
+
+CO2_SENSOR_DEFAULTS: tuple[tuple[str, str], ...] = (
+    (CONF_CO2_ELECTRICITY, DEFAULT_CO2_ELECTRICITY_SENSOR),
+    (CONF_CO2_GAS, DEFAULT_CO2_GAS_SENSOR),
+    (CONF_CO2_WATER, DEFAULT_CO2_WATER_SENSOR),
+    (CONF_CO2_SAVINGS, DEFAULT_CO2_SAVINGS_SENSOR),
 )
 
 
@@ -58,20 +63,17 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
         # Première installation → afficher formulaire avec valeurs par défaut
-        data_schema = vol.Schema(
-            {
-                vol.Required(CONF_OUTPUT_DIR, default=DEFAULT_OUTPUT_DIR): cv.string,
-                vol.Required(CONF_FILENAME_PATTERN, default=DEFAULT_FILENAME_PATTERN): cv.string,
-                vol.Required(CONF_DEFAULT_REPORT_TYPE, default=DEFAULT_REPORT_TYPE): vol.In(VALID_REPORT_TYPES),
-                vol.Required(CONF_LANGUAGE, default=DEFAULT_LANGUAGE): vol.In(SUPPORTED_LANGUAGES),
+        schema_dict: dict[Any, Any] = {
+            vol.Required(CONF_OUTPUT_DIR, default=DEFAULT_OUTPUT_DIR): cv.string,
+            vol.Required(CONF_FILENAME_PATTERN, default=DEFAULT_FILENAME_PATTERN): cv.string,
+            vol.Required(CONF_DEFAULT_REPORT_TYPE, default=DEFAULT_REPORT_TYPE): vol.In(VALID_REPORT_TYPES),
+            vol.Required(CONF_LANGUAGE, default=DEFAULT_LANGUAGE): vol.In(SUPPORTED_LANGUAGES),
+        }
 
-                vol.Required(CONF_CO2_ELECTRICITY, default=DEFAULT_CO2_ELECTRICITY_SENSOR): cv.entity_id,
-                vol.Required(CONF_CO2_GAS, default=DEFAULT_CO2_GAS_SENSOR): cv.entity_id,
-                vol.Required(CONF_CO2_WATER, default=DEFAULT_CO2_WATER_SENSOR): cv.entity_id,
-                vol.Required(CONF_CO2_SAVINGS, default=DEFAULT_CO2_SAVINGS_SENSOR): cv.entity_id,
+        for option_key, default in CO2_SENSOR_DEFAULTS:
+            schema_dict[vol.Required(option_key, default=default)] = cv.entity_id
 
-            }
-        )
+        data_schema = vol.Schema(schema_dict)
 
         return self.async_show_form(
             step_id="user",
@@ -99,20 +101,34 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        data_schema = vol.Schema(
-            {
+        schema_dict = {
+            vol.Required(
+                CONF_OUTPUT_DIR,
+                default=data.get(CONF_OUTPUT_DIR, DEFAULT_OUTPUT_DIR),
+            ): cv.string,
+            vol.Required(
+                CONF_FILENAME_PATTERN,
+                default=data.get(CONF_FILENAME_PATTERN, DEFAULT_FILENAME_PATTERN),
+            ): cv.string,
+            vol.Required(
+                CONF_DEFAULT_REPORT_TYPE,
+                default=data.get(CONF_DEFAULT_REPORT_TYPE, DEFAULT_REPORT_TYPE),
+            ): vol.In(VALID_REPORT_TYPES),
+            vol.Required(
+                CONF_LANGUAGE,
+                default=data.get(CONF_LANGUAGE, DEFAULT_LANGUAGE),
+            ): vol.In(SUPPORTED_LANGUAGES),
+        }
 
-                vol.Required(CONF_OUTPUT_DIR, default=data.get(CONF_OUTPUT_DIR, DEFAULT_OUTPUT_DIR)): cv.string,
-                vol.Required(CONF_FILENAME_PATTERN, default=data.get(CONF_FILENAME_PATTERN, DEFAULT_FILENAME_PATTERN)): cv.string,
-                vol.Required(CONF_DEFAULT_REPORT_TYPE, default=data.get(CONF_DEFAULT_REPORT_TYPE, DEFAULT_REPORT_TYPE)): vol.In(VALID_REPORT_TYPES),
-                vol.Required(CONF_LANGUAGE, default=data.get(CONF_LANGUAGE, DEFAULT_LANGUAGE)): vol.In(SUPPORTED_LANGUAGES),
-                vol.Required(CONF_CO2_ELECTRICITY, default=data.get(CONF_CO2_ELECTRICITY, DEFAULT_CO2_ELECTRICITY_SENSOR)): cv.entity_id,
-                vol.Required(CONF_CO2_GAS, default=data.get(CONF_CO2_GAS, DEFAULT_CO2_GAS_SENSOR)): cv.entity_id,
-                vol.Required(CONF_CO2_WATER, default=data.get(CONF_CO2_WATER, DEFAULT_CO2_WATER_SENSOR)): cv.entity_id,
-                vol.Required(CONF_CO2_SAVINGS, default=data.get(CONF_CO2_SAVINGS, DEFAULT_CO2_SAVINGS_SENSOR)): cv.entity_id,
+        for option_key, default in CO2_SENSOR_DEFAULTS:
+            schema_dict[
+                vol.Required(
+                    option_key,
+                    default=data.get(option_key, default),
+                )
+            ] = cv.entity_id
 
-            }
-        )
+        data_schema = vol.Schema(schema_dict)
 
         return self.async_show_form(step_id="init", data_schema=data_schema)
 
