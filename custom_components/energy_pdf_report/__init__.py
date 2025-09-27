@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, tzinfo
 
 from pathlib import Path
-from typing import Any, Iterable, TYPE_CHECKING
+from typing import Any, Iterable, Mapping, TYPE_CHECKING
 
 import voluptuous as vol
 
@@ -32,6 +32,10 @@ from homeassistant.util import dt as dt_util
 from homeassistant.components.energy.data import async_get_manager
 
 from .const import (
+    CONF_CO2_ELECTRICITY_SENSOR,
+    CONF_CO2_GAS_SENSOR,
+    CONF_CO2_SAVINGS_SENSOR,
+    CONF_CO2_WATER_SENSOR,
     CONF_DASHBOARD,
     CONF_DEFAULT_REPORT_TYPE,
     CONF_END_DATE,
@@ -40,6 +44,10 @@ from .const import (
     CONF_PERIOD,
     CONF_START_DATE,
     CONF_LANGUAGE,
+    DEFAULT_CO2_ELECTRICITY_SENSOR,
+    DEFAULT_CO2_GAS_SENSOR,
+    DEFAULT_CO2_SAVINGS_SENSOR,
+    DEFAULT_CO2_WATER_SENSOR,
     DEFAULT_FILENAME_PATTERN,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_LANGUAGE,
@@ -210,37 +218,84 @@ _ALLOWED_OPTION_KEYS: tuple[str, ...] = (
 
     CONF_LANGUAGE,
 
+    CONF_CO2_ELECTRICITY_SENSOR,
+    CONF_CO2_GAS_SENSOR,
+    CONF_CO2_WATER_SENSOR,
+    CONF_CO2_SAVINGS_SENSOR,
+
 )
 
 
-CO2_SENSOR_DEFINITIONS: tuple[CO2SensorDefinition, ...] = (
-    CO2SensorDefinition(
+def _coerce_entity_id(value: Any) -> str | None:
+    """Valider et normaliser un entity_id fourni par l'utilisateur."""
 
-        "sensor.co2_scope_2_electricite_co2_prod_daily_precis",
+    if not isinstance(value, str):
+        return None
 
-        "co2_electricity",
-        False,
-    ),
-    CO2SensorDefinition(
+    candidate = value.strip()
+    if not candidate:
+        return None
 
-        "sensor.co2_gaz_jour",
-        "co2_gas",
-        False,
-    ),
-    CO2SensorDefinition(
-        "sensor.co2_eau_jour",
+    try:
+        return cv.entity_id(candidate)
+    except vol.Invalid:
+        _LOGGER.debug("Entity ID invalide ignoré pour le rapport CO₂: %s", candidate)
+        return None
 
-        "co2_water",
-        False,
-    ),
-    CO2SensorDefinition(
 
-        "sensor.co2_savings_today",
+def _build_co2_sensor_definitions(
+    options: Mapping[str, Any]
+) -> tuple[CO2SensorDefinition, ...]:
+    """Construire les définitions de capteurs CO₂ à partir de la configuration."""
 
-        "co2_savings",
-        True,
-    ),
-)
+    sensor_sources = (
+        (
+            CONF_CO2_ELECTRICITY_SENSOR,
+            DEFAULT_CO2_ELECTRICITY_SENSOR,
+            "co2_electricity",
+            False,
+        ),
+        (
+            CONF_CO2_GAS_SENSOR,
+            DEFAULT_CO2_GAS_SENSOR,
+            "co2_gas",
+            False,
+        ),
+        (
+            CONF_CO2_WATER_SENSOR,
+            DEFAULT_CO2_WATER_SENSOR,
+            "co2_water",
+            False,
+        ),
+        (
+            CONF_CO2_SAVINGS_SENSOR,
+            DEFAULT_CO2_SAVINGS_SENSOR,
+            "co2_savings",
+            True,
+        ),
+    )
+
+    definitions: list[CO2SensorDefinition] = []
+
+    for option_key, default_entity, translation_key, is_saving in sensor_sources:
+        configured_entity = options.get(option_key)
+
+        entity_id = _coerce_entity_id(configured_entity)
+        if entity_id is None:
+            entity_id = _coerce_entity_id(default_entity)
+
+        if entity_id is None:
+            continue
+
+        definitions.append(
+            CO2SensorDefinition(
+                entity_id,
+                translation_key,
+                is_saving,
+            )
+        )
+
+    return tuple(definitions)
 
 
 def _get_config_entry_options(hass: HomeAssistant) -> dict[str, Any]:
@@ -334,11 +389,13 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     stats_map, metadata = await _collect_statistics(hass, metrics, start, end, bucket)
     totals = _calculate_totals(metrics, stats_map)
 
+    co2_definitions = _build_co2_sensor_definitions(options)
+
     co2_totals = await _collect_co2_statistics(
         hass,
         start,
         end,
-        CO2_SENSOR_DEFINITIONS,
+        co2_definitions,
     )
 
     output_dir_input = call.data.get(
@@ -384,7 +441,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
         translations,
 
-        CO2_SENSOR_DEFINITIONS,
+        co2_definitions,
         co2_totals,
     )
 

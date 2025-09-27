@@ -2,6 +2,24 @@
 
   "config": {
     "step": {
+      "user": {
+        "data": {
+          "output_dir": "Répertoire de sortie",
+          "filename_pattern": "Modèle de nom de fichier",
+          "default_report_type": "Type de rapport par défaut",
+          "language": "Langue du rapport",
+          "co2_electricity_sensor": "Capteur CO₂ électricité",
+          "co2_gas_sensor": "Capteur CO₂ gaz",
+          "co2_water_sensor": "Capteur CO₂ eau",
+          "co2_savings_sensor": "Capteur CO₂ économies"
+        },
+        "data_description": {
+          "co2_electricity_sensor": "Identifiant de l'entité qui fournit les émissions de CO₂ liées à la consommation d'électricité.",
+          "co2_gas_sensor": "Identifiant de l'entité qui fournit les émissions de CO₂ liées à l'utilisation du gaz.",
+          "co2_water_sensor": "Identifiant de l'entité qui fournit les émissions de CO₂ liées à la consommation d'eau.",
+          "co2_savings_sensor": "Identifiant de l'entité qui suit les émissions de CO₂ évitées (économies). Laissez vide pour masquer la ligne."
+        }
+      },
       "reinstall_confirm": {
         "title": "Remplacer la configuration existante",
         "description": "Une configuration Energy PDF Report (« {title} ») est déjà présente. Validez pour la supprimer et la réinstaller."
@@ -18,7 +36,23 @@
       "init": {
 
         "title": "Options du rapport PDF énergie",
-        "description": "Définissez le répertoire de sortie, la période par défaut et le modèle de nom de fichier utilisés lors de la génération des PDF."
+        "description": "Définissez le répertoire de sortie, la période par défaut et le modèle de nom de fichier utilisés lors de la génération des PDF.",
+        "data": {
+          "output_dir": "Répertoire de sortie",
+          "filename_pattern": "Modèle de nom de fichier",
+          "default_report_type": "Type de rapport par défaut",
+          "language": "Langue du rapport",
+          "co2_electricity_sensor": "Capteur CO₂ électricité",
+          "co2_gas_sensor": "Capteur CO₂ gaz",
+          "co2_water_sensor": "Capteur CO₂ eau",
+          "co2_savings_sensor": "Capteur CO₂ économies"
+        },
+        "data_description": {
+          "co2_electricity_sensor": "Identifiant de l'entité qui fournit les émissions de CO₂ liées à la consommation d'électricité.",
+          "co2_gas_sensor": "Identifiant de l'entité qui fournit les émissions de CO₂ liées à l'utilisation du gaz.",
+          "co2_water_sensor": "Identifiant de l'entité qui fournit les émissions de CO₂ liées à la consommation d'eau.",
+          "co2_savings_sensor": "Identifiant de l'entité qui suit les émissions de CO₂ évitées (économies). Laissez vide pour masquer la ligne."
+        }
 
       }
     }
