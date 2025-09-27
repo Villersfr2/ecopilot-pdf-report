@@ -32,10 +32,12 @@ from homeassistant.util import dt as dt_util
 from homeassistant.components.energy.data import async_get_manager
 
 from .const import (
+
     CONF_CO2_ELECTRICITY,
     CONF_CO2_GAS,
     CONF_CO2_SAVINGS,
     CONF_CO2_WATER,
+
     CONF_DASHBOARD,
     CONF_DEFAULT_REPORT_TYPE,
     CONF_END_DATE,
@@ -218,6 +220,7 @@ _ALLOWED_OPTION_KEYS: tuple[str, ...] = (
 
     CONF_LANGUAGE,
 
+
     CONF_CO2_ELECTRICITY,
     CONF_CO2_GAS,
     CONF_CO2_WATER,
@@ -248,6 +251,7 @@ CO2_SENSOR_DEFINITIONS: tuple[CO2SensorDefinition, ...] = (
         True,
     ),
 )
+
 
 _CO2_SENSOR_OPTION_DEFAULTS: tuple[tuple[str, str], ...] = (
     (CONF_CO2_ELECTRICITY, DEFAULT_CO2_ELECTRICITY_SENSOR),

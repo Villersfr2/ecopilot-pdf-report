@@ -14,11 +14,16 @@ Generate PDF energy reports directly from your Home Assistant instance using the
 
 ## Configuration
 
-The integration exposes three configurable options that can be adjusted from the integration entry's **Options** dialog in Home Assistant:
+The integration exposes configurable options that can be adjusted from the integration entry's **Options** dialog in Home Assistant:
 
 - `output_dir`: Directory where generated PDF reports are stored.
 - `filename_pattern`: Template used to name generated PDF files.
 - `default_report_type`: Report type selected by default when generating PDFs.
+- `language`: Preferred language for generated reports.
+- `co2_electricity_sensor`: Entity ID used to track electricity-related CO₂ emissions in the report.
+- `co2_gas_sensor`: Entity ID used to track gas-related CO₂ emissions in the report.
+- `co2_water_sensor`: Entity ID used to track water-related CO₂ emissions in the report.
+- `co2_savings_sensor`: Entity ID used to track CO₂ savings. Leave blank if you do not want the savings row in the PDF.
 
 You can revisit the integration options at any time via **Settings → Devices & Services → EcoPilot PDF Report → Configure** to update these values.
 

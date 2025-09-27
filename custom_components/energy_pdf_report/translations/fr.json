@@ -3,6 +3,7 @@
     "step": {
       "user": {
         "data": {
+
           "co2_sensor_electricity": "Capteur CO₂ électricité",
           "co2_sensor_gas": "Capteur CO₂ gaz",
           "co2_sensor_water": "Capteur CO₂ eau",
@@ -13,6 +14,7 @@
           "co2_sensor_gas": "Identifiant de l'entité fournissant les émissions de gaz (par défaut : sensor.co2_gaz_jour).",
           "co2_sensor_water": "Identifiant de l'entité fournissant les émissions liées à l'eau (par défaut : sensor.co2_eau_jour).",
           "co2_sensor_savings": "Identifiant de l'entité indiquant les économies de CO₂ (par défaut : sensor.co2_savings_today)."
+
         }
       },
       "reinstall_confirm": {
@@ -31,6 +33,7 @@
         "title": "Options du rapport PDF énergie",
         "description": "Définissez le répertoire de sortie, la période par défaut et le modèle de nom de fichier utilisés lors de la génération des PDF.",
         "data": {
+
           "co2_sensor_electricity": "Capteur CO₂ électricité",
           "co2_sensor_gas": "Capteur CO₂ gaz",
           "co2_sensor_water": "Capteur CO₂ eau",
@@ -42,6 +45,7 @@
           "co2_sensor_water": "Identifiant de l'entité fournissant les émissions liées à l'eau (par défaut : sensor.co2_eau_jour).",
           "co2_sensor_savings": "Identifiant de l'entité indiquant les économies de CO₂ (par défaut : sensor.co2_savings_today)."
         }
+
       }
     }
   }

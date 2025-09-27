@@ -36,4 +36,15 @@ DEFAULT_CO2_WATER_SENSOR = "sensor.co2_eau_jour"
 DEFAULT_CO2_SAVINGS_SENSOR = "sensor.co2_savings_today"
 
 
+CONF_CO2_ELECTRICITY_SENSOR = "co2_electricity_sensor"
+CONF_CO2_GAS_SENSOR = "co2_gas_sensor"
+CONF_CO2_WATER_SENSOR = "co2_water_sensor"
+CONF_CO2_SAVINGS_SENSOR = "co2_savings_sensor"
+
+DEFAULT_CO2_ELECTRICITY_SENSOR = "sensor.co2_scope_2_electricite_co2_prod_daily_precis"
+DEFAULT_CO2_GAS_SENSOR = "sensor.co2_gaz_jour"
+DEFAULT_CO2_WATER_SENSOR = "sensor.co2_eau_jour"
+DEFAULT_CO2_SAVINGS_SENSOR = "sensor.co2_savings_today"
+
+
 PDF_TITLE = "Rapport énergie"
