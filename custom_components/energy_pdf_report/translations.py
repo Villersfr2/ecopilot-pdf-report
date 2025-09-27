@@ -88,10 +88,12 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         co2_savings_label="Économie",
         co2_balance_sentence="Émissions totales : {emissions} • Économies : {savings} • Bilan net : {balance}.",
         co2_sensor_labels={
+
             "co2_electricity": "Électricité (scope 2)",
             "co2_gas": "Gaz",
             "co2_water": "Eau",
             "co2_savings": "Économies solaire (autoconsommation)",
+
         },
         conclusion_title="Conclusion",
         conclusion_total="Le flux net observé sur la période atteint {total}.",
@@ -138,10 +140,12 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         co2_savings_label="Saving",
         co2_balance_sentence="Total emissions: {emissions} • Savings: {savings} • Net balance: {balance}.",
         co2_sensor_labels={
+
             "co2_electricity": "Electricity (scope 2)",
             "co2_gas": "Gas",
             "co2_water": "Water",
             "co2_savings": "Solar self-consumption savings",
+
         },
         conclusion_title="Conclusion",
         conclusion_total="The net flow observed over the period is {total}.",
@@ -188,10 +192,12 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         co2_savings_label="Besparing",
         co2_balance_sentence="Totale uitstoot: {emissions} • Besparingen: {savings} • Nettoresultaat: {balance}.",
         co2_sensor_labels={
+
             "co2_electricity": "Elektriciteit (scope 2)",
             "co2_gas": "Gas",
             "co2_water": "Water",
             "co2_savings": "Zonnebesparing (eigen verbruik)",
+
         },
         conclusion_title="Conclusie",
         conclusion_total="De netto stroom over de periode bedraagt {total}.",

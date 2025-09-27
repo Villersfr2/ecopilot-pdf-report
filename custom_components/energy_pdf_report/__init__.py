@@ -215,22 +215,28 @@ _ALLOWED_OPTION_KEYS: tuple[str, ...] = (
 
 CO2_SENSOR_DEFINITIONS: tuple[CO2SensorDefinition, ...] = (
     CO2SensorDefinition(
+
         "sensor.co2_scope_2_electricite_co2_prod_daily_precis",
+
         "co2_electricity",
         False,
     ),
     CO2SensorDefinition(
+
         "sensor.co2_gaz_jour",
         "co2_gas",
         False,
     ),
     CO2SensorDefinition(
         "sensor.co2_eau_jour",
+
         "co2_water",
         False,
     ),
     CO2SensorDefinition(
+
         "sensor.co2_savings_today",
+
         "co2_savings",
         True,
     ),
@@ -1045,8 +1051,10 @@ async def _collect_co2_statistics(
             need_history.append(entity_id)
 
     if need_history:
+
         for entity_id in need_history:
             history_map = await instance.async_add_executor_job(
+
                 recorder_history.state_changes_during_period,
                 hass,
                 start,
@@ -1054,9 +1062,11 @@ async def _collect_co2_statistics(
                 entity_id,
             )
 
+
             states = history_map.get(entity_id)
             if not states:
                 continue
+
 
             definition = entity_map.get(entity_id)
             if not definition:
