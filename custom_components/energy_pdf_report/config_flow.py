@@ -13,6 +13,7 @@ try:
     from homeassistant.data_entry_flow import FlowResult
 except ImportError:  # pragma: no cover - compat with older versions
     FlowResult = dict[str, Any]
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
@@ -97,6 +98,8 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         self._reconfigure_entry: config_entries.ConfigEntry | None = None
 
+        self._cached_existing_values: dict[str, Any] | None = None
+
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -104,16 +107,10 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
 
 
-        if self._reconfigure_entry is None and not user_input:
-            existing_entries = self._async_current_entries()
-            if existing_entries:
-                self._reconfigure_entry = existing_entries[0]
-                return await self.async_step_reconfigure()
-
-
         if user_input is not None:
-            await self.async_set_unique_id(DOMAIN)
+            await self.async_set_unique_id(DOMAIN, raise_on_progress=False)
             self._abort_if_unique_id_configured()
+            self._cached_existing_values = None
 
             return self.async_create_entry(
                 title="Energy PDF Report",
@@ -121,52 +118,62 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
 
-        defaults = _merge_defaults()
+        if self._reconfigure_entry is None:
+            existing_entries = self._async_current_entries()
+            if existing_entries:
+                entry = existing_entries[0]
+                self._reconfigure_entry = entry
+                self._cached_existing_values = {
+                    **dict(entry.data),
+                    **dict(entry.options),
+                }
+                self.context["title_placeholders"] = {
+                    "title": entry.title or "Energy PDF Report",
+                }
+                return await self.async_step_reinstall_confirm()
+
+        defaults = _merge_defaults(self._cached_existing_values)
+        self._cached_existing_values = None
 
 
         return self.async_show_form(
             step_id="user",
             data_schema=_build_schema(defaults),
             errors={},
+
         )
 
-
-    async def async_step_reconfigure(
+    async def async_step_reinstall_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle reconfiguration when an entry already exists."""
-
-        if self._reconfigure_entry is None:
-            return await self.async_step_user(user_input)
+        """Ask confirmation before replacing an existing entry."""
 
         entry = self._reconfigure_entry
+        if entry is None:
+            return await self.async_step_user(user_input)
+
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reinstall_confirm",
+                data_schema=vol.Schema({}),
+            )
 
         if entry.unique_id is None:
             self.hass.config_entries.async_update_entry(entry, unique_id=DOMAIN)
 
-        defaults = _merge_defaults(
-            {
-                **dict(entry.data),
-                **dict(entry.options),
-            }
-        )
+        try:
+            removal_result = await self.hass.config_entries.async_remove(entry.entry_id)
+        except HomeAssistantError:
+            removal_result = False
 
-        if user_input is not None:
+        if removal_result is False:
+            self._cached_existing_values = None
             self._reconfigure_entry = None
-            return self.async_update_reload_and_abort(
-                entry,
-                data_updates=user_input,
-            )
+            return self.async_abort(reason="remove_failed")
 
+        self._reconfigure_entry = None
 
-        title = self._reinstall_entry.title or "Energy PDF Report"
-        return self.async_show_form(
-
-            step_id="reconfigure",
-            data_schema=_build_schema(defaults),
-            errors={},
-
-        )
+        return await self.async_step_user()
 
 
 class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
