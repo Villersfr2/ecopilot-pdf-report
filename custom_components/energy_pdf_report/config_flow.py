@@ -95,36 +95,34 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         """Initialize the config flow."""
 
-        self._reinstall_entry: config_entries.ConfigEntry | None = None
-        self._cached_defaults: dict[str, Any] | None = None
+        self._reconfigure_entry: config_entries.ConfigEntry | None = None
+
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the initial step."""
 
-        if self._reinstall_entry is None and not user_input:
+
+        if self._reconfigure_entry is None and not user_input:
             existing_entries = self._async_current_entries()
             if existing_entries:
-                self._reinstall_entry = existing_entries[0]
-                self._cached_defaults = _merge_defaults(
-                    {
-                        **dict(self._reinstall_entry.data),
-                        **dict(self._reinstall_entry.options),
-                    }
-                )
-                return await self.async_step_reinstall_confirm()
+                self._reconfigure_entry = existing_entries[0]
+                return await self.async_step_reconfigure()
+
 
         if user_input is not None:
             await self.async_set_unique_id(DOMAIN)
             self._abort_if_unique_id_configured()
-            self._cached_defaults = None
+
             return self.async_create_entry(
                 title="Energy PDF Report",
                 data=user_input,
             )
 
-        defaults = _merge_defaults(self._cached_defaults)
+
+        defaults = _merge_defaults()
+
 
         return self.async_show_form(
             step_id="user",
@@ -132,30 +130,42 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors={},
         )
 
-    async def async_step_reinstall_confirm(
+
+    async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Confirm removal of an existing configuration before reinstalling."""
+        """Handle reconfiguration when an entry already exists."""
 
-        if self._reinstall_entry is None:
+        if self._reconfigure_entry is None:
             return await self.async_step_user(user_input)
 
-        if user_input is not None:
-            try:
-                await self.hass.config_entries.async_remove(
-                    self._reinstall_entry.entry_id
-                )
-            except HomeAssistantError:
-                return self.async_abort(reason="remove_failed")
+        entry = self._reconfigure_entry
 
-            self._reinstall_entry = None
-            return await self.async_step_user()
+        if entry.unique_id is None:
+            self.hass.config_entries.async_update_entry(entry, unique_id=DOMAIN)
+
+        defaults = _merge_defaults(
+            {
+                **dict(entry.data),
+                **dict(entry.options),
+            }
+        )
+
+        if user_input is not None:
+            self._reconfigure_entry = None
+            return self.async_update_reload_and_abort(
+                entry,
+                data_updates=user_input,
+            )
+
 
         title = self._reinstall_entry.title or "Energy PDF Report"
         return self.async_show_form(
-            step_id="reinstall_confirm",
-            description_placeholders={"title": title},
-            data_schema=vol.Schema({}),
+
+            step_id="reconfigure",
+            data_schema=_build_schema(defaults),
+            errors={},
+
         )
 
 
