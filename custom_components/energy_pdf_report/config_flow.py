@@ -29,10 +29,7 @@ from .const import (
 
     DEFAULT_CO2,
 
-    DEFAULT_CO2_ELECTRICITY_SENSOR,
-    DEFAULT_CO2_GAS_SENSOR,
-    DEFAULT_CO2_SAVINGS_SENSOR,
-    DEFAULT_CO2_WATER_SENSOR,
+    
     DEFAULT_FILENAME_PATTERN,
     DEFAULT_LANGUAGE,
     DEFAULT_OUTPUT_DIR,
@@ -91,6 +88,10 @@ def _build_schema(defaults: Mapping[str, Any]) -> vol.Schema:
         ),
 
         vol.Required(CONF_CO2, default=defaults[CONF_CO2]): cv.boolean,
+        vol.Optional(CONF_CO2_ELECTRICITY): cv.string,
++       vol.Optional(CONF_CO2_GAS): cv.string,
++       vol.Optional(CONF_CO2_WATER): cv.string,
++       vol.Optional(CONF_CO2_SAVINGS): cv.string,
     }
 
     for option_key, _ in CO2_SENSOR_DEFAULTS:
