@@ -92,7 +92,7 @@ def _build_schema(defaults: Mapping[str, Any]) -> vol.Schema:
     for option_key, default in CO2_SENSOR_DEFAULTS:
         schema_dict[
             vol.Optional(option_key, default=defaults[option_key])
-        ] = cv.entity_id
+        ] = cv.string
 
     return vol.Schema(schema_dict)
 
