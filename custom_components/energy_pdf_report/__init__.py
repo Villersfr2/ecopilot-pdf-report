@@ -33,6 +33,7 @@ from homeassistant.components.energy.data import async_get_manager
 
 from .const import (
 
+    CONF_CO2,
     CONF_CO2_ELECTRICITY,
     CONF_CO2_GAS,
     CONF_CO2_SAVINGS,
@@ -46,6 +47,7 @@ from .const import (
     CONF_PERIOD,
     CONF_START_DATE,
     CONF_LANGUAGE,
+    DEFAULT_CO2,
     DEFAULT_CO2_ELECTRICITY_SENSOR,
     DEFAULT_CO2_GAS_SENSOR,
     DEFAULT_CO2_SAVINGS_SENSOR,
@@ -246,6 +248,7 @@ _BASE_ALLOWED_OPTION_KEYS: tuple[str, ...] = (
     CONF_FILENAME_PATTERN,
     CONF_DEFAULT_REPORT_TYPE,
     CONF_LANGUAGE,
+    CONF_CO2,
 )
 
 _ALLOWED_OPTION_KEYS: tuple[str, ...] = _BASE_ALLOWED_OPTION_KEYS + tuple(
@@ -257,6 +260,9 @@ def _build_co2_sensor_definitions(
     options: Mapping[str, Any]
 ) -> tuple[CO2SensorDefinition, ...]:
     """Return CO₂ sensor definitions, including user overrides."""
+
+    if not bool(options.get(CONF_CO2, DEFAULT_CO2)):
+        return ()
 
     definitions: list[CO2SensorDefinition] = []
 
@@ -355,7 +361,9 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     call_data[CONF_PERIOD] = period
 
     start, end, display_start, display_end, bucket = _resolve_period(hass, call_data)
-    metrics = _build_metrics(preferences)
+    co2_enabled = bool(options.get(CONF_CO2, DEFAULT_CO2))
+
+    metrics = _build_metrics(preferences, co2_enabled)
 
 
     if not metrics:
@@ -368,12 +376,14 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
     co2_definitions = _build_co2_sensor_definitions(options)
 
-    co2_totals = await _collect_co2_statistics(
-        hass,
-        start,
-        end,
-        co2_definitions,
-    )
+    co2_totals: dict[str, float] = {}
+    if co2_definitions:
+        co2_totals = await _collect_co2_statistics(
+            hass,
+            start,
+            end,
+            co2_definitions,
+        )
 
     output_dir_input = call.data.get(
         CONF_OUTPUT_DIR, options.get(CONF_OUTPUT_DIR, DEFAULT_OUTPUT_DIR)
@@ -910,7 +920,10 @@ def _localize_date(day: date, timezone: tzinfo) -> datetime:
 
 
 
-def _build_metrics(preferences: "EnergyPreferences" | dict[str, Any]) -> list[MetricDefinition]:
+def _build_metrics(
+    preferences: "EnergyPreferences" | dict[str, Any],
+    co2_enabled: bool = False,
+) -> list[MetricDefinition]:
     """Lister les statistiques à inclure dans le rapport."""
 
     metrics: list[MetricDefinition] = []
@@ -922,15 +935,22 @@ def _build_metrics(preferences: "EnergyPreferences" | dict[str, Any]) -> list[Me
         seen.add(statistic_id)
         metrics.append(MetricDefinition(category, statistic_id))
 
+    def _add_co2_stat(container: Any) -> None:
+        if not co2_enabled or not isinstance(container, dict):
+            return
+        _add(container.get("stat_co2"), "Émissions CO₂")
+
     for source in preferences.get("energy_sources", []):
         source_type = source.get("type")
         if source_type == "grid":
             for flow in source.get("flow_from", []):
                 _add(flow.get("stat_energy_from"), "Import réseau")
                 _add(flow.get("stat_cost"), "Coût réseau")
+                _add_co2_stat(flow)
             for flow in source.get("flow_to", []):
                 _add(flow.get("stat_energy_to"), "Export réseau")
                 _add(flow.get("stat_compensation"), "Compensation réseau")
+                _add_co2_stat(flow)
         elif source_type == "solar":
             _add(source.get("stat_energy_from"), "Production solaire")
         elif source_type == "battery":
@@ -943,8 +963,11 @@ def _build_metrics(preferences: "EnergyPreferences" | dict[str, Any]) -> list[Me
             _add(source.get("stat_energy_from"), "Consommation eau")
             _add(source.get("stat_cost"), "Coût eau")
 
+        _add_co2_stat(source)
+
     for device in preferences.get("device_consumption", []):
         _add(device.get("stat_consumption"), "Consommation appareils")
+        _add_co2_stat(device)
 
     return metrics
 
@@ -1356,9 +1379,6 @@ def _build_pdf(
         builder.add_chart(translations.chart_title, summary_series)
 
     totals_map = co2_totals or {}
-    builder.add_section_title(translations.co2_section_title)
-    builder.add_paragraph(translations.co2_section_intro)
-
     co2_rows: list[tuple[str, str, str]] = []
     emissions_total = 0.0
     savings_total = 0.0
@@ -1384,17 +1404,20 @@ def _build_pdf(
         else:
             emissions_total += value
 
-    co2_widths = builder.compute_column_widths((0.5, 0.28, 0.22))
-    builder.add_table(
-        TableConfig(
-            title=translations.co2_table_title,
-            headers=translations.co2_table_headers,
-            rows=co2_rows,
-            column_widths=co2_widths,
-        )
-    )
-
     if co2_rows:
+        builder.add_section_title(translations.co2_section_title)
+        builder.add_paragraph(translations.co2_section_intro)
+
+        co2_widths = builder.compute_column_widths((0.5, 0.28, 0.22))
+        builder.add_table(
+            TableConfig(
+                title=translations.co2_table_title,
+                headers=translations.co2_table_headers,
+                rows=co2_rows,
+                column_widths=co2_widths,
+            )
+        )
+
         balance = emissions_total - savings_total
         builder.add_paragraph(
             translations.co2_balance_sentence.format(

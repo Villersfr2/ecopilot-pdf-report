@@ -47,6 +47,8 @@ _CATEGORY_COLORS: Tuple[Tuple[str, Tuple[int, int, int]], ...] = (
     ("gaz", (231, 76, 60)),
     ("eau", (26, 188, 156)),
     ("batterie", (155, 89, 182)),
+    ("co₂", (100, 100, 100)),
+    ("co2", (100, 100, 100)),
 )
 
 _CATEGORY_ICON_HINTS: Tuple[Tuple[str, str], ...] = (
@@ -59,6 +61,8 @@ _CATEGORY_ICON_HINTS: Tuple[Tuple[str, str], ...] = (
     ("gaz", "🔥"),
     ("eau", "💧"),
     ("batterie", "🔋"),
+    ("co₂", "🌍"),
+    ("co2", "🌍"),
 )
 
 

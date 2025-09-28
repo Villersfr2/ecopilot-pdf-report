@@ -24,6 +24,7 @@ CONF_FILENAME_PATTERN = "filename_pattern"
 CONF_DEFAULT_REPORT_TYPE = "default_report_type"
 
 CONF_LANGUAGE = "language"
+CONF_CO2 = "co2_enabled"
 
 CONF_CO2_ELECTRICITY = "co2_sensor_electricity"
 CONF_CO2_GAS = "co2_sensor_gas"
@@ -34,6 +35,8 @@ DEFAULT_CO2_ELECTRICITY_SENSOR = "sensor.co2_scope_2_electricite_co2_prod_daily_
 DEFAULT_CO2_GAS_SENSOR = "sensor.co2_gaz_jour"
 DEFAULT_CO2_WATER_SENSOR = "sensor.co2_eau_jour"
 DEFAULT_CO2_SAVINGS_SENSOR = "sensor.co2_savings_today"
+
+DEFAULT_CO2 = False
 
 
 PDF_TITLE = "Rapport énergie"
