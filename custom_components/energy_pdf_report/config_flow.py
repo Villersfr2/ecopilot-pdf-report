@@ -61,7 +61,7 @@ def _merge_defaults(existing: Mapping[str, Any] | None = None) -> dict[str, Any]
     merged: dict[str, Any] = dict(BASE_DEFAULTS)
     if existing:
         for key, value in existing.items():
-            if value is not None:
+            if value not in (None, ""):
                 merged[key] = value
 
     return merged
@@ -83,7 +83,9 @@ def _build_schema(defaults: Mapping[str, Any]) -> vol.Schema:
     }
 
     for option_key, _ in CO2_SENSOR_DEFAULTS:
-        schema_dict[vol.Required(option_key, default=defaults[option_key])] = cv.entity_id
+        schema_dict[
+            vol.Optional(option_key, default=defaults[option_key])
+        ] = vol.Any(cv.entity_id, "", None)
 
     return vol.Schema(schema_dict)
 
