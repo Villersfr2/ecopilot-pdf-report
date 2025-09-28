@@ -1,6 +1,8 @@
 """Flux de configuration pour l'intégration Energy PDF Report."""
 
 from __future__ import annotations
+
+from collections.abc import Mapping
 from typing import Any
 
 import voluptuous as vol
@@ -19,19 +21,19 @@ from .const import (
     CONF_CO2_WATER,
     CONF_DEFAULT_REPORT_TYPE,
     CONF_FILENAME_PATTERN,
-    CONF_OUTPUT_DIR,
     CONF_LANGUAGE,
+    CONF_OUTPUT_DIR,
     DEFAULT_CO2_ELECTRICITY_SENSOR,
     DEFAULT_CO2_GAS_SENSOR,
     DEFAULT_CO2_SAVINGS_SENSOR,
     DEFAULT_CO2_WATER_SENSOR,
     DEFAULT_FILENAME_PATTERN,
+    DEFAULT_LANGUAGE,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_REPORT_TYPE,
-    DEFAULT_LANGUAGE,
     DOMAIN,
-    VALID_REPORT_TYPES,
     SUPPORTED_LANGUAGES,
+    VALID_REPORT_TYPES,
 )
 
 CO2_SENSOR_DEFAULTS: tuple[tuple[str, str], ...] = (
@@ -41,44 +43,117 @@ CO2_SENSOR_DEFAULTS: tuple[tuple[str, str], ...] = (
     (CONF_CO2_SAVINGS, DEFAULT_CO2_SAVINGS_SENSOR),
 )
 
+BASE_DEFAULTS: dict[str, Any] = {
+    CONF_OUTPUT_DIR: DEFAULT_OUTPUT_DIR,
+    CONF_FILENAME_PATTERN: DEFAULT_FILENAME_PATTERN,
+    CONF_DEFAULT_REPORT_TYPE: DEFAULT_REPORT_TYPE,
+    CONF_LANGUAGE: DEFAULT_LANGUAGE,
+}
+for option_key, default in CO2_SENSOR_DEFAULTS:
+    BASE_DEFAULTS[option_key] = default
+
+
+def _merge_defaults(existing: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Return config values merged with defaults."""
+
+    merged: dict[str, Any] = dict(BASE_DEFAULTS)
+    if existing:
+        for key, value in existing.items():
+            if value is not None:
+                merged[key] = value
+
+    return merged
+
+
+def _build_schema(defaults: Mapping[str, Any]) -> vol.Schema:
+    """Build the voluptuous schema for the flow."""
+
+    schema_dict: dict[Any, Any] = {
+        vol.Required(CONF_OUTPUT_DIR, default=defaults[CONF_OUTPUT_DIR]): cv.string,
+        vol.Required(CONF_FILENAME_PATTERN, default=defaults[CONF_FILENAME_PATTERN]): cv.string,
+        vol.Required(
+            CONF_DEFAULT_REPORT_TYPE,
+            default=defaults[CONF_DEFAULT_REPORT_TYPE],
+        ): vol.In(VALID_REPORT_TYPES),
+        vol.Required(CONF_LANGUAGE, default=defaults[CONF_LANGUAGE]): vol.In(
+            SUPPORTED_LANGUAGES
+        ),
+    }
+
+    for option_key, _ in CO2_SENSOR_DEFAULTS:
+        schema_dict[vol.Required(option_key, default=defaults[option_key])] = cv.entity_id
+
+    return vol.Schema(schema_dict)
+
 
 class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Energy PDF Report."""
 
     VERSION = 1
 
-    _ENTITY_OR_EMPTY = vol.Any(cv.entity_id, vol.In([""]))
+    def __init__(self) -> None:
+        """Initialize the config flow."""
+
+        self._reconfigure_entry: config_entries.ConfigEntry | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the initial step."""
 
-        errors: dict[str, str] = {}
+        if self._reconfigure_entry is None and not user_input:
+            existing_entries = self._async_current_entries()
+            if existing_entries:
+                self._reconfigure_entry = existing_entries[0]
+                return await self.async_step_reconfigure()
 
         if user_input is not None:
+            await self.async_set_unique_id(DOMAIN)
+            self._abort_if_unique_id_configured()
             return self.async_create_entry(
                 title="Energy PDF Report",
-                data=user_input,  # 👉 valeurs stockées directement dans data
+                data=user_input,
             )
 
-        # Première installation → afficher formulaire avec valeurs par défaut
-        schema_dict: dict[Any, Any] = {
-            vol.Required(CONF_OUTPUT_DIR, default=DEFAULT_OUTPUT_DIR): cv.string,
-            vol.Required(CONF_FILENAME_PATTERN, default=DEFAULT_FILENAME_PATTERN): cv.string,
-            vol.Required(CONF_DEFAULT_REPORT_TYPE, default=DEFAULT_REPORT_TYPE): vol.In(VALID_REPORT_TYPES),
-            vol.Required(CONF_LANGUAGE, default=DEFAULT_LANGUAGE): vol.In(SUPPORTED_LANGUAGES),
-        }
-
-        for option_key, default in CO2_SENSOR_DEFAULTS:
-            schema_dict[vol.Required(option_key, default=default)] = cv.entity_id
-
-        data_schema = vol.Schema(schema_dict)
+        defaults = _merge_defaults()
 
         return self.async_show_form(
             step_id="user",
-            data_schema=data_schema,
-            errors=errors,
+            data_schema=_build_schema(defaults),
+            errors={},
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle reconfiguration when an entry already exists."""
+
+        if self._reconfigure_entry is None:
+            return await self.async_step_user(user_input)
+
+        entry = self._reconfigure_entry
+
+        if entry.unique_id is None:
+            self.hass.config_entries.async_update_entry(entry, unique_id=DOMAIN)
+
+        defaults = _merge_defaults(
+            {
+                **dict(entry.data),
+                **dict(entry.options),
+            }
+        )
+
+        if user_input is not None:
+            self._reconfigure_entry = None
+            return self.async_update_reload_and_abort(
+                entry,
+                data_updates=user_input,
+            )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=_build_schema(defaults),
+            errors={},
         )
 
 
@@ -92,45 +167,22 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-
-
-        data = dict(self.config_entry.data)  # 👉 récupérer les valeurs de base
-        data.update(self.config_entry.options)
-
+        """Manage Energy PDF Report options."""
 
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        schema_dict = {
-            vol.Required(
-                CONF_OUTPUT_DIR,
-                default=data.get(CONF_OUTPUT_DIR, DEFAULT_OUTPUT_DIR),
-            ): cv.string,
-            vol.Required(
-                CONF_FILENAME_PATTERN,
-                default=data.get(CONF_FILENAME_PATTERN, DEFAULT_FILENAME_PATTERN),
-            ): cv.string,
-            vol.Required(
-                CONF_DEFAULT_REPORT_TYPE,
-                default=data.get(CONF_DEFAULT_REPORT_TYPE, DEFAULT_REPORT_TYPE),
-            ): vol.In(VALID_REPORT_TYPES),
-            vol.Required(
-                CONF_LANGUAGE,
-                default=data.get(CONF_LANGUAGE, DEFAULT_LANGUAGE),
-            ): vol.In(SUPPORTED_LANGUAGES),
-        }
+        defaults = _merge_defaults(
+            {
+                **self.config_entry.data,
+                **self.config_entry.options,
+            }
+        )
 
-        for option_key, default in CO2_SENSOR_DEFAULTS:
-            schema_dict[
-                vol.Required(
-                    option_key,
-                    default=data.get(option_key, default),
-                )
-            ] = cv.entity_id
-
-        data_schema = vol.Schema(schema_dict)
-
-        return self.async_show_form(step_id="init", data_schema=data_schema)
+        return self.async_show_form(
+            step_id="init",
+            data_schema=_build_schema(defaults),
+        )
 
 
 async def async_get_options_flow(config_entry: config_entries.ConfigEntry):
