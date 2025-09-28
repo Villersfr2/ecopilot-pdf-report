@@ -13,7 +13,7 @@ try:
     from homeassistant.data_entry_flow import FlowResult
 except ImportError:  # pragma: no cover - compat with older versions
     FlowResult = dict[str, Any]
-from homeassistant.exceptions import HomeAssistantError
+
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
@@ -26,19 +26,21 @@ from .const import (
     CONF_FILENAME_PATTERN,
     CONF_LANGUAGE,
     CONF_OUTPUT_DIR,
-
     DEFAULT_CO2,
-
-    
     DEFAULT_FILENAME_PATTERN,
     DEFAULT_LANGUAGE,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_REPORT_TYPE,
+    DEFAULT_CO2_ELECTRICITY_SENSOR,
+    DEFAULT_CO2_GAS_SENSOR,
+    DEFAULT_CO2_WATER_SENSOR,
+    DEFAULT_CO2_SAVINGS_SENSOR,
     DOMAIN,
     SUPPORTED_LANGUAGES,
     VALID_REPORT_TYPES,
 )
 
+# Définitions des capteurs CO₂ avec leurs valeurs par défaut
 CO2_SENSOR_DEFAULTS: tuple[tuple[str, str], ...] = (
     (CONF_CO2_ELECTRICITY, DEFAULT_CO2_ELECTRICITY_SENSOR),
     (CONF_CO2_GAS, DEFAULT_CO2_GAS_SENSOR),
@@ -46,36 +48,30 @@ CO2_SENSOR_DEFAULTS: tuple[tuple[str, str], ...] = (
     (CONF_CO2_SAVINGS, DEFAULT_CO2_SAVINGS_SENSOR),
 )
 
+# Valeurs par défaut globales
 BASE_DEFAULTS: dict[str, Any] = {
     CONF_OUTPUT_DIR: DEFAULT_OUTPUT_DIR,
     CONF_FILENAME_PATTERN: DEFAULT_FILENAME_PATTERN,
     CONF_DEFAULT_REPORT_TYPE: DEFAULT_REPORT_TYPE,
     CONF_LANGUAGE: DEFAULT_LANGUAGE,
-
     CONF_CO2: DEFAULT_CO2,
-
 }
 for option_key, default in CO2_SENSOR_DEFAULTS:
     BASE_DEFAULTS[option_key] = default
 
 
 def _merge_defaults(existing: Mapping[str, Any] | None = None) -> dict[str, Any]:
-    """Return config values merged with defaults."""
-
+    """Retourner les valeurs de config fusionnées avec les valeurs par défaut."""
     merged: dict[str, Any] = dict(BASE_DEFAULTS)
     if existing:
         for key, value in existing.items():
-
             if value is not None:
-
                 merged[key] = value
-
     return merged
 
 
 def _build_schema(defaults: Mapping[str, Any]) -> vol.Schema:
-    """Build the voluptuous schema for the flow."""
-
+    """Construire le schéma voluptuous pour le flow."""
     schema_dict: dict[Any, Any] = {
         vol.Required(CONF_OUTPUT_DIR, default=defaults[CONF_OUTPUT_DIR]): cv.string,
         vol.Required(CONF_FILENAME_PATTERN, default=defaults[CONF_FILENAME_PATTERN]): cv.string,
@@ -86,17 +82,14 @@ def _build_schema(defaults: Mapping[str, Any]) -> vol.Schema:
         vol.Required(CONF_LANGUAGE, default=defaults[CONF_LANGUAGE]): vol.In(
             SUPPORTED_LANGUAGES
         ),
-
         vol.Required(CONF_CO2, default=defaults[CONF_CO2]): cv.boolean,
-        vol.Optional(CONF_CO2_ELECTRICITY): cv.string,
-+       vol.Optional(CONF_CO2_GAS): cv.string,
-+       vol.Optional(CONF_CO2_WATER): cv.string,
-+       vol.Optional(CONF_CO2_SAVINGS): cv.string,
     }
 
-    for option_key, _ in CO2_SENSOR_DEFAULTS:
-        schema_dict[vol.Required(option_key, default=defaults[option_key])] = cv.entity_id
-
+    # Ajout des capteurs CO₂
+    for option_key, default in CO2_SENSOR_DEFAULTS:
+        schema_dict[
+            vol.Required(option_key, default=defaults[option_key])
+        ] = cv.entity_id
 
     return vol.Schema(schema_dict)
 
@@ -107,18 +100,14 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     def __init__(self) -> None:
-        """Initialize the config flow."""
-
+        """Initialiser le flow de config."""
         self._reconfigure_entry: config_entries.ConfigEntry | None = None
-
         self._cached_existing_values: dict[str, Any] | None = None
-
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle the initial step."""
-
+        """Étape initiale."""
         if user_input is not None:
             await self.async_set_unique_id(DOMAIN, raise_on_progress=False)
             self._abort_if_unique_id_configured()
@@ -128,7 +117,6 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 title="Energy PDF Report",
                 data=user_input,
             )
-
 
         if self._reconfigure_entry is None:
             existing_entries = self._async_current_entries()
@@ -147,19 +135,16 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         defaults = _merge_defaults(self._cached_existing_values)
         self._cached_existing_values = None
 
-
         return self.async_show_form(
             step_id="user",
             data_schema=_build_schema(defaults),
             errors={},
-
         )
 
     async def async_step_reinstall_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Ask confirmation before replacing an existing entry."""
-
+        """Confirmer avant de remplacer une entrée existante."""
         entry = self._reconfigure_entry
         if entry is None:
             return await self.async_step_user(user_input)
@@ -184,22 +169,20 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="remove_failed")
 
         self._reconfigure_entry = None
-
         return await self.async_step_user()
 
 
 class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle options for Energy PDF Report."""
+    """Gérer les options pour Energy PDF Report."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
+        """Initialiser le flow d’options."""
         self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Manage Energy PDF Report options."""
-
+        """Gérer les options Energy PDF Report."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
@@ -217,5 +200,5 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
 
 
 async def async_get_options_flow(config_entry: config_entries.ConfigEntry):
-    """Return the options flow handler."""
+    """Retourner le gestionnaire d’options."""
     return EnergyPDFReportOptionsFlowHandler(config_entry)
