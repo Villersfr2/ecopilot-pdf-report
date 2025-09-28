@@ -841,11 +841,9 @@ def _resolve_period(
     end_local = _localize_date(end_date, timezone)
     end_local_exclusive = end_local + timedelta(days=1)
 
-
     start_utc = dt_util.as_utc(start_local)
-    end_utc = dt_util.as_utc(end_local)
+    end_utc = dt_util.as_utc(end_local_exclusive)  # ⚠️ utiliser la borne exclusive
     display_end = end_local_exclusive - timedelta(seconds=1)
-
 
     return (
         start_utc,
@@ -854,6 +852,7 @@ def _resolve_period(
         display_end,
         _select_bucket(period, start_local, end_local_exclusive),
     )
+
 
 
 
