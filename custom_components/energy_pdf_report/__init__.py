@@ -1086,7 +1086,7 @@ async def _collect_co2_statistics(
         statistic_ids,
         "day",
         None,
-        {"sum"},
+        {"change"},
     )
 
     need_history: list[str] = []
@@ -1100,11 +1100,11 @@ async def _collect_co2_statistics(
         total = 0.0
         has_sum = False
         for row in rows:
-            sum_value = row.get("sum")
-            if sum_value is None:
+            change_value = row.get("change")
+            if change_value is None:
                 continue
             has_sum = True
-            total += float(sum_value)
+            total += float(change_value)
 
         if has_sum:
             definition = entity_map[entity_id]
