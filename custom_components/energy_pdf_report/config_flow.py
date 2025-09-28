@@ -17,6 +17,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
+    CONF_CO2,
     CONF_CO2_ELECTRICITY,
     CONF_CO2_GAS,
     CONF_CO2_SAVINGS,
@@ -25,6 +26,9 @@ from .const import (
     CONF_FILENAME_PATTERN,
     CONF_LANGUAGE,
     CONF_OUTPUT_DIR,
+
+    DEFAULT_CO2,
+
     DEFAULT_CO2_ELECTRICITY_SENSOR,
     DEFAULT_CO2_GAS_SENSOR,
     DEFAULT_CO2_SAVINGS_SENSOR,
@@ -50,6 +54,9 @@ BASE_DEFAULTS: dict[str, Any] = {
     CONF_FILENAME_PATTERN: DEFAULT_FILENAME_PATTERN,
     CONF_DEFAULT_REPORT_TYPE: DEFAULT_REPORT_TYPE,
     CONF_LANGUAGE: DEFAULT_LANGUAGE,
+
+    CONF_CO2: DEFAULT_CO2,
+
 }
 for option_key, default in CO2_SENSOR_DEFAULTS:
     BASE_DEFAULTS[option_key] = default
@@ -61,7 +68,9 @@ def _merge_defaults(existing: Mapping[str, Any] | None = None) -> dict[str, Any]
     merged: dict[str, Any] = dict(BASE_DEFAULTS)
     if existing:
         for key, value in existing.items():
-            if value not in (None, ""):
+
+            if value is not None:
+
                 merged[key] = value
 
     return merged
@@ -80,12 +89,13 @@ def _build_schema(defaults: Mapping[str, Any]) -> vol.Schema:
         vol.Required(CONF_LANGUAGE, default=defaults[CONF_LANGUAGE]): vol.In(
             SUPPORTED_LANGUAGES
         ),
+
+        vol.Required(CONF_CO2, default=defaults[CONF_CO2]): cv.boolean,
     }
 
     for option_key, _ in CO2_SENSOR_DEFAULTS:
-        schema_dict[
-            vol.Optional(option_key, default=defaults[option_key])
-        ] = vol.Any(cv.entity_id, "", None)
+        schema_dict[vol.Required(option_key, default=defaults[option_key])] = cv.entity_id
+
 
     return vol.Schema(schema_dict)
 
@@ -107,7 +117,6 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the initial step."""
-
 
         if user_input is not None:
             await self.async_set_unique_id(DOMAIN, raise_on_progress=False)
