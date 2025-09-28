@@ -1456,18 +1456,11 @@ def _prepare_detail_rows(
 ) -> list[tuple[str, str, str, str]]:
     """Préparer les lignes détaillées du rapport."""
 
-    hass = async_get_hass()  # récupère l’instance HA courante
     details: list[tuple[str, str, float, str]] = []
     for metric in metrics:
         total = totals.get(metric.statistic_id, 0.0)
         meta_entry = metadata.get(metric.statistic_id)
-
-        state_obj = hass.states.get(metric.statistic_id)
-        if state_obj and "friendly_name" in state_obj.attributes:
-            name = state_obj.attributes["friendly_name"]
-        else:
-            name = _extract_name(meta_entry, metric.statistic_id)
-
+        name = _extract_name(meta_entry, metric.statistic_id)
         unit = _extract_unit(meta_entry)
         details.append((metric.category, name, total, unit))
 
@@ -1478,7 +1471,6 @@ def _prepare_detail_rows(
         rows.append((category, name, _format_number(value), unit))
 
     return rows
-
 
 def _extract_unit(metadata: tuple[int, StatisticMetaData] | None) -> str:
     """Récupérer l'unité depuis les métadonnées."""
