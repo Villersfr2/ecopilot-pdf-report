@@ -12,7 +12,7 @@ from datetime import date, datetime, time, timedelta, tzinfo
 
 from pathlib import Path
 from typing import Any, Iterable, Mapping, TYPE_CHECKING
-
+from homeassistant.core import async_get_hass
 import voluptuous as vol
 
 from homeassistant.components import persistent_notification, recorder
@@ -1450,19 +1450,18 @@ def _prepare_summary_rows(
 
 
 def _prepare_detail_rows(
-    hass: HomeAssistant,
     metrics: Iterable[MetricDefinition],
     totals: dict[str, float],
     metadata: dict[str, tuple[int, StatisticMetaData]],
 ) -> list[tuple[str, str, str, str]]:
     """Préparer les lignes détaillées du rapport."""
 
+    hass = async_get_hass()  # récupère l’instance HA courante
     details: list[tuple[str, str, float, str]] = []
     for metric in metrics:
         total = totals.get(metric.statistic_id, 0.0)
         meta_entry = metadata.get(metric.statistic_id)
 
-        # Utiliser le friendly_name si disponible, sinon fallback
         state_obj = hass.states.get(metric.statistic_id)
         if state_obj and "friendly_name" in state_obj.attributes:
             name = state_obj.attributes["friendly_name"]
