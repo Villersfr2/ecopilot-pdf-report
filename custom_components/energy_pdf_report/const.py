@@ -31,7 +31,7 @@ CONF_CO2_GAS = "co2_sensor_gas"
 CONF_CO2_WATER = "co2_sensor_water"
 CONF_CO2_SAVINGS = "co2_sensor_savings"
 
-DEFAULT_CO2_ELECTRICITY_SENSOR = "sensor.co2_scope_2_electricite_co2_prod_daily_precis"
+DEFAULT_CO2_ELECTRICITY_SENSOR = "sensor.domintell_co2_scope_2_electricite_co2_prod_daily_precis"
 DEFAULT_CO2_GAS_SENSOR = "sensor.co2_gaz_jour"
 DEFAULT_CO2_WATER_SENSOR = "sensor.co2_eau_jour"
 DEFAULT_CO2_SAVINGS_SENSOR = "sensor.co2_savings_today"
