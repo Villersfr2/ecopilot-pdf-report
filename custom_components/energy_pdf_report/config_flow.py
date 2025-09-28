@@ -8,6 +8,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.exceptions import HomeAssistantError
 try:
     from homeassistant.data_entry_flow import FlowResult
 except ImportError:  # pragma: no cover - compat with older versions
@@ -96,10 +97,12 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         self._reconfigure_entry: config_entries.ConfigEntry | None = None
 
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the initial step."""
+
 
         if self._reconfigure_entry is None and not user_input:
             existing_entries = self._async_current_entries()
@@ -107,21 +110,26 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._reconfigure_entry = existing_entries[0]
                 return await self.async_step_reconfigure()
 
+
         if user_input is not None:
             await self.async_set_unique_id(DOMAIN)
             self._abort_if_unique_id_configured()
+
             return self.async_create_entry(
                 title="Energy PDF Report",
                 data=user_input,
             )
 
+
         defaults = _merge_defaults()
+
 
         return self.async_show_form(
             step_id="user",
             data_schema=_build_schema(defaults),
             errors={},
         )
+
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
@@ -150,10 +158,14 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data_updates=user_input,
             )
 
+
+        title = self._reinstall_entry.title or "Energy PDF Report"
         return self.async_show_form(
+
             step_id="reconfigure",
             data_schema=_build_schema(defaults),
             errors={},
+
         )
 
 
