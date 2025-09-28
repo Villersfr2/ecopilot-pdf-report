@@ -266,16 +266,18 @@ def _build_co2_sensor_definitions(
 
     definitions: list[CO2SensorDefinition] = []
 
-    for option_key, translation_key, is_saving, default_entity in CO2_SENSOR_CONFIG:
+    for option_key, translation_key, is_saving, _default_entity in CO2_SENSOR_CONFIG:
         override = options.get(option_key)
-        entity_id = (
-            override.strip()
-            if isinstance(override, str) and override.strip()
-            else default_entity
-        )
+        if isinstance(override, str):
+            override = override.strip()
+        else:
+            override = ""
+
+        if not override:
+            continue
 
         definitions.append(
-            CO2SensorDefinition(entity_id, translation_key, is_saving)
+            CO2SensorDefinition(override, translation_key, is_saving)
         )
 
     return tuple(definitions)
@@ -1378,35 +1380,32 @@ def _build_pdf(
         builder.add_paragraph(translations.chart_intro)
         builder.add_chart(translations.chart_title, summary_series)
 
+
     totals_map = co2_totals or {}
     co2_rows: list[tuple[str, str, str]] = []
     emissions_total = 0.0
     savings_total = 0.0
 
-    for definition in co2_definitions:
-        value = totals_map.get(definition.translation_key)
-        if value is None:
-            continue
 
-        label = translations.co2_sensor_labels.get(
-            definition.translation_key, definition.translation_key
-        )
-        formatted_value = _format_number(value)
-        impact_label = (
-            translations.co2_savings_label
-            if definition.is_saving
-            else translations.co2_emission_label
-        )
-        co2_rows.append((label, f"{formatted_value} kgCO₂e", impact_label))
+    if co2_definitions:
+        totals_map = co2_totals or {}
+        builder.add_section_title(translations.co2_section_title)
+        builder.add_paragraph(translations.co2_section_intro)
 
-        if definition.is_saving:
-            savings_total += value
-        else:
-            emissions_total += value
+        co2_rows: list[tuple[str, str, str]] = []
+        emissions_total = 0.0
+        savings_total = 0.0
+
+        for definition in co2_definitions:
+            value = totals_map.get(definition.translation_key)
+            if value is None:
+                continue
+
 
     if co2_rows:
         builder.add_section_title(translations.co2_section_title)
         builder.add_paragraph(translations.co2_section_intro)
+
 
         co2_widths = builder.compute_column_widths((0.5, 0.28, 0.22))
         builder.add_table(
@@ -1418,6 +1417,7 @@ def _build_pdf(
             )
         )
 
+
         balance = emissions_total - savings_total
         builder.add_paragraph(
             translations.co2_balance_sentence.format(
@@ -1427,6 +1427,7 @@ def _build_pdf(
             ),
             bold=True,
         )
+
 
     builder.add_section_title(translations.conclusion_title)
 

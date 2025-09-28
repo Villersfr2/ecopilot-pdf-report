@@ -8,6 +8,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.exceptions import HomeAssistantError
 try:
     from homeassistant.data_entry_flow import FlowResult
 except ImportError:  # pragma: no cover - compat with older versions
@@ -25,7 +26,9 @@ from .const import (
     CONF_FILENAME_PATTERN,
     CONF_LANGUAGE,
     CONF_OUTPUT_DIR,
+
     DEFAULT_CO2,
+
     DEFAULT_CO2_ELECTRICITY_SENSOR,
     DEFAULT_CO2_GAS_SENSOR,
     DEFAULT_CO2_SAVINGS_SENSOR,
@@ -51,7 +54,9 @@ BASE_DEFAULTS: dict[str, Any] = {
     CONF_FILENAME_PATTERN: DEFAULT_FILENAME_PATTERN,
     CONF_DEFAULT_REPORT_TYPE: DEFAULT_REPORT_TYPE,
     CONF_LANGUAGE: DEFAULT_LANGUAGE,
+
     CONF_CO2: DEFAULT_CO2,
+
 }
 for option_key, default in CO2_SENSOR_DEFAULTS:
     BASE_DEFAULTS[option_key] = default
@@ -63,7 +68,9 @@ def _merge_defaults(existing: Mapping[str, Any] | None = None) -> dict[str, Any]
     merged: dict[str, Any] = dict(BASE_DEFAULTS)
     if existing:
         for key, value in existing.items():
+
             if value is not None:
+
                 merged[key] = value
 
     return merged
@@ -82,11 +89,13 @@ def _build_schema(defaults: Mapping[str, Any]) -> vol.Schema:
         vol.Required(CONF_LANGUAGE, default=defaults[CONF_LANGUAGE]): vol.In(
             SUPPORTED_LANGUAGES
         ),
+
         vol.Required(CONF_CO2, default=defaults[CONF_CO2]): cv.boolean,
     }
 
     for option_key, _ in CO2_SENSOR_DEFAULTS:
         schema_dict[vol.Required(option_key, default=defaults[option_key])] = cv.entity_id
+
 
     return vol.Schema(schema_dict)
 
@@ -100,7 +109,9 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize the config flow."""
 
         self._reconfigure_entry: config_entries.ConfigEntry | None = None
+
         self._cached_existing_values: dict[str, Any] | None = None
+
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -111,10 +122,12 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(DOMAIN, raise_on_progress=False)
             self._abort_if_unique_id_configured()
             self._cached_existing_values = None
+
             return self.async_create_entry(
                 title="Energy PDF Report",
                 data=user_input,
             )
+
 
         if self._reconfigure_entry is None:
             existing_entries = self._async_current_entries()
@@ -133,10 +146,12 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         defaults = _merge_defaults(self._cached_existing_values)
         self._cached_existing_values = None
 
+
         return self.async_show_form(
             step_id="user",
             data_schema=_build_schema(defaults),
             errors={},
+
         )
 
     async def async_step_reinstall_confirm(
