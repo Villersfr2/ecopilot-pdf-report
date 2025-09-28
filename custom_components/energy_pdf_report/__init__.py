@@ -16,7 +16,6 @@ from typing import Any, Iterable, Mapping, TYPE_CHECKING
 import voluptuous as vol
 
 from homeassistant.components import persistent_notification, recorder
-from homeassistant.components.recorder import history as recorder_history
 from homeassistant.components.recorder import statistics as recorder_statistics
 from homeassistant.components.recorder.models.statistics import StatisticMetaData
 from homeassistant.components.recorder.statistics import StatisticsRow
@@ -1089,12 +1088,9 @@ async def _collect_co2_statistics(
         {"change"},
     )
 
-    need_history: list[str] = []
-
     for entity_id in statistic_ids:
         rows = stats_map.get(entity_id)
         if not rows:
-            need_history.append(entity_id)
             continue
 
         total = 0.0
@@ -1108,55 +1104,6 @@ async def _collect_co2_statistics(
 
         if has_sum:
             definition = entity_map[entity_id]
-            results[definition.translation_key] = total
-        else:
-            need_history.append(entity_id)
-
-    if need_history:
-
-        for entity_id in need_history:
-            history_map = await instance.async_add_executor_job(
-
-                recorder_history.state_changes_during_period,
-                hass,
-                start,
-                end,
-                entity_id,
-            )
-
-
-            states = history_map.get(entity_id)
-            if not states:
-                continue
-
-
-            definition = entity_map.get(entity_id)
-            if not definition:
-                continue
-
-            daily_snapshots: dict[date, tuple[datetime, float]] = {}
-
-            for state in states:
-                value = _safe_float(state.state)
-                if value is None:
-                    continue
-
-                local_changed = dt_util.as_local(state.last_changed)
-                day_key = local_changed.date()
-                previous = daily_snapshots.get(day_key)
-
-                if previous is not None and local_changed < previous[0]:
-                    continue
-
-                daily_snapshots[day_key] = (local_changed, value)
-
-            total = 0.0
-            for _, snapshot_value in daily_snapshots.values():
-                safe_value = _safe_float(snapshot_value)
-                if safe_value is None:
-                    continue
-                total += safe_value
-
             results[definition.translation_key] = total
 
     return results
