@@ -1450,6 +1450,7 @@ def _prepare_summary_rows(
 
 
 def _prepare_detail_rows(
+    hass: HomeAssistant,
     metrics: Iterable[MetricDefinition],
     totals: dict[str, float],
     metadata: dict[str, tuple[int, StatisticMetaData]],
@@ -1460,7 +1461,14 @@ def _prepare_detail_rows(
     for metric in metrics:
         total = totals.get(metric.statistic_id, 0.0)
         meta_entry = metadata.get(metric.statistic_id)
-        name = _extract_name(meta_entry, metric.statistic_id)
+
+        # Utiliser le friendly_name si disponible, sinon fallback
+        state_obj = hass.states.get(metric.statistic_id)
+        if state_obj and "friendly_name" in state_obj.attributes:
+            name = state_obj.attributes["friendly_name"]
+        else:
+            name = _extract_name(meta_entry, metric.statistic_id)
+
         unit = _extract_unit(meta_entry)
         details.append((metric.category, name, total, unit))
 
