@@ -8,6 +8,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.exceptions import HomeAssistantError
 try:
     from homeassistant.data_entry_flow import FlowResult
 except ImportError:  # pragma: no cover - compat with older versions
@@ -96,21 +97,26 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize the config flow."""
 
         self._reconfigure_entry: config_entries.ConfigEntry | None = None
+
         self._cached_existing_values: dict[str, Any] | None = None
+
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the initial step."""
 
+
         if user_input is not None:
             await self.async_set_unique_id(DOMAIN, raise_on_progress=False)
             self._abort_if_unique_id_configured()
             self._cached_existing_values = None
+
             return self.async_create_entry(
                 title="Energy PDF Report",
                 data=user_input,
             )
+
 
         if self._reconfigure_entry is None:
             existing_entries = self._async_current_entries()
@@ -129,10 +135,12 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         defaults = _merge_defaults(self._cached_existing_values)
         self._cached_existing_values = None
 
+
         return self.async_show_form(
             step_id="user",
             data_schema=_build_schema(defaults),
             errors={},
+
         )
 
     async def async_step_reinstall_confirm(
