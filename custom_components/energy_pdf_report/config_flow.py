@@ -67,6 +67,9 @@ def _merge_defaults(existing: Mapping[str, Any] | None = None) -> dict[str, Any]
         for key, value in existing.items():
             if value is not None:
                 merged[key] = value
+    # Garde-fou: s'assurer que default_report_type est valide
+    if merged.get(CONF_DEFAULT_REPORT_TYPE) not in VALID_REPORT_TYPES:
+        merged[CONF_DEFAULT_REPORT_TYPE] = DEFAULT_REPORT_TYPE
     return merged
 
 
@@ -85,10 +88,10 @@ def _build_schema(defaults: Mapping[str, Any]) -> vol.Schema:
         vol.Required(CONF_CO2, default=defaults[CONF_CO2]): cv.boolean,
     }
 
-    # Ajout des capteurs CO₂
+    # Ajout des capteurs CO₂ (optionnels pour éviter un crash si vide)
     for option_key, default in CO2_SENSOR_DEFAULTS:
         schema_dict[
-            vol.Required(option_key, default=defaults[option_key])
+            vol.Optional(option_key, default=defaults[option_key])
         ] = cv.entity_id
 
     return vol.Schema(schema_dict)
