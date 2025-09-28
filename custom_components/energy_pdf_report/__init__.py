@@ -1392,7 +1392,6 @@ def _build_pdf(
 
 
     if co2_definitions:
-        totals_map = co2_totals or {}
         builder.add_section_title(translations.co2_section_title)
         builder.add_paragraph(translations.co2_section_intro)
 
@@ -1401,39 +1400,39 @@ def _build_pdf(
         savings_total = 0.0
 
         for definition in co2_definitions:
-            value = totals_map.get(definition.translation_key)
-            if value is None:
-                continue
-
-
-    if co2_rows:
-        builder.add_section_title(translations.co2_section_title)
-        builder.add_paragraph(translations.co2_section_intro)
-
-
-        co2_widths = builder.compute_column_widths((0.5, 0.28, 0.22))
-        builder.add_table(
-            TableConfig(
-                title=translations.co2_table_title,
-                headers=translations.co2_table_headers,
-                rows=co2_rows,
-                column_widths=co2_widths,
+            value = totals_map.get(definition.translation_key, 0.0)
+            label = translations.co2_sensor_labels.get(
+                definition.translation_key, definition.translation_key
             )
-        )
+            if definition.is_saving:
+                impact = translations.co2_savings_label
+                savings_total += value
+            else:
+                impact = translations.co2_emission_label
+                emissions_total += value
+            co2_rows.append((label, _format_number(value), impact))
 
+        if co2_rows:
+            co2_widths = builder.compute_column_widths((0.5, 0.28, 0.22))
+            builder.add_table(
+                TableConfig(
+                    title=translations.co2_table_title,
+                    headers=translations.co2_table_headers,
+                    rows=co2_rows,
+                    column_widths=co2_widths,
+                )
+            )
 
-        balance = emissions_total - savings_total
-        builder.add_paragraph(
-            translations.co2_balance_sentence.format(
-                emissions=f"{_format_number(emissions_total)} kgCO₂e",
-                savings=f"{_format_number(savings_total)} kgCO₂e",
-                balance=f"{_format_number(balance)} kgCO₂e",
-            ),
-            bold=True,
-        )
+            balance = emissions_total - savings_total
+            builder.add_paragraph(
+                translations.co2_balance_sentence.format(
+                    emissions=f"{_format_number(emissions_total)} kgCO₂e",
+                    savings=f"{_format_number(savings_total)} kgCO₂e",
+                    balance=f"{_format_number(balance)} kgCO₂e",
+                ),
+                bold=True,
+            )
 
-
-    builder.add_section_title(translations.conclusion_title)
 
 
     if summary_series:
