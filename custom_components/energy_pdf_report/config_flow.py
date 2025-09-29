@@ -26,15 +26,27 @@ from .const import (
     CONF_FILENAME_PATTERN,
     CONF_LANGUAGE,
     CONF_OUTPUT_DIR,
+    CONF_PRICE,
+    CONF_PRICE_BALANCE,
+    CONF_PRICE_GAS,
+    CONF_PRICE_REVENUES,
+    CONF_PRICE_WATER,
+    CONF_PRICE_WITHDRAWAL,
     DEFAULT_CO2,
+    DEFAULT_CO2_ELECTRICITY_SENSOR,
+    DEFAULT_CO2_GAS_SENSOR,
+    DEFAULT_CO2_SAVINGS_SENSOR,
+    DEFAULT_CO2_WATER_SENSOR,
     DEFAULT_FILENAME_PATTERN,
     DEFAULT_LANGUAGE,
     DEFAULT_OUTPUT_DIR,
+    DEFAULT_PRICE,
+    DEFAULT_PRICE_BALANCE_SENSOR,
+    DEFAULT_PRICE_GAS_SENSOR,
+    DEFAULT_PRICE_REVENUES_SENSOR,
+    DEFAULT_PRICE_WATER_SENSOR,
+    DEFAULT_PRICE_WITHDRAWAL_SENSOR,
     DEFAULT_REPORT_TYPE,
-    DEFAULT_CO2_ELECTRICITY_SENSOR,
-    DEFAULT_CO2_GAS_SENSOR,
-    DEFAULT_CO2_WATER_SENSOR,
-    DEFAULT_CO2_SAVINGS_SENSOR,
     DOMAIN,
     SUPPORTED_LANGUAGES,
     VALID_REPORT_TYPES,
@@ -48,6 +60,14 @@ CO2_SENSOR_DEFAULTS: tuple[tuple[str, str], ...] = (
     (CONF_CO2_SAVINGS, DEFAULT_CO2_SAVINGS_SENSOR),
 )
 
+PRICE_SENSOR_DEFAULTS: tuple[tuple[str, str], ...] = (
+    (CONF_PRICE_REVENUES, DEFAULT_PRICE_REVENUES_SENSOR),
+    (CONF_PRICE_WITHDRAWAL, DEFAULT_PRICE_WITHDRAWAL_SENSOR),
+    (CONF_PRICE_BALANCE, DEFAULT_PRICE_BALANCE_SENSOR),
+    (CONF_PRICE_GAS, DEFAULT_PRICE_GAS_SENSOR),
+    (CONF_PRICE_WATER, DEFAULT_PRICE_WATER_SENSOR),
+)
+
 # Valeurs par défaut globales
 BASE_DEFAULTS: dict[str, Any] = {
     CONF_OUTPUT_DIR: DEFAULT_OUTPUT_DIR,
@@ -55,9 +75,22 @@ BASE_DEFAULTS: dict[str, Any] = {
     CONF_DEFAULT_REPORT_TYPE: DEFAULT_REPORT_TYPE,
     CONF_LANGUAGE: DEFAULT_LANGUAGE,
     CONF_CO2: DEFAULT_CO2,
+    CONF_PRICE: DEFAULT_PRICE,
 }
 for option_key, default in CO2_SENSOR_DEFAULTS:
     BASE_DEFAULTS[option_key] = default
+for option_key, default in PRICE_SENSOR_DEFAULTS:
+    BASE_DEFAULTS[option_key] = default
+
+_BASE_ALLOWED_OPTION_KEYS: tuple[str, ...] = tuple(
+    dict.fromkeys(
+        (
+            *BASE_DEFAULTS.keys(),
+            *(option_key for option_key, _ in CO2_SENSOR_DEFAULTS),
+            *(option_key for option_key, _ in PRICE_SENSOR_DEFAULTS),
+        )
+    )
+)
 
 
 def _merge_defaults(existing: Mapping[str, Any] | None = None) -> dict[str, Any]:
@@ -86,10 +119,17 @@ def _build_schema(defaults: Mapping[str, Any]) -> vol.Schema:
             SUPPORTED_LANGUAGES
         ),
         vol.Required(CONF_CO2, default=defaults[CONF_CO2]): cv.boolean,
+        vol.Required(CONF_PRICE, default=defaults[CONF_PRICE]): cv.boolean,
     }
 
     # Ajout des capteurs CO₂ (optionnels pour éviter un crash si vide)
     for option_key, default in CO2_SENSOR_DEFAULTS:
+        schema_dict[
+            vol.Optional(option_key, default=defaults[option_key])
+        ] = cv.string
+
+    # Ajout des capteurs de prix (optionnels pour permettre des overrides)
+    for option_key, default in PRICE_SENSOR_DEFAULTS:
         schema_dict[
             vol.Optional(option_key, default=defaults[option_key])
         ] = cv.string

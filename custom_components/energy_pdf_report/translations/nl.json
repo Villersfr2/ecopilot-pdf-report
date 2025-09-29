@@ -1,0 +1,72 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "co2_sensor_electricity": "CO₂-sensor elektriciteit",
+          "co2_sensor_gas": "CO₂-sensor gas",
+          "co2_sensor_water": "CO₂-sensor water",
+          "co2_sensor_savings": "CO₂-sensor besparingen",
+          "price_enabled": "Prijssensoren inschakelen",
+          "price_sensor_revenues": "Sensor voor inkomsten uit elektriciteitsinjectie",
+          "price_sensor_withdrawal": "Sensor voor kosten van elektriciteitsafname",
+          "price_sensor_balance": "Sensor voor nettobalans elektriciteit",
+          "price_sensor_gas": "Sensor voor gaskosten",
+          "price_sensor_water": "Sensor voor waterkosten"
+        },
+        "data_description": {
+          "co2_sensor_electricity": "Entiteit met elektriciteitsuitstoot (standaard: sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
+          "co2_sensor_gas": "Entiteit met gasuitstoot (standaard: sensor.co2_gaz_jour).",
+          "co2_sensor_water": "Entiteit met watergerelateerde uitstoot (standaard: sensor.co2_eau_jour).",
+          "co2_sensor_savings": "Entiteit met CO₂-besparingen (standaard: sensor.co2_savings_today).",
+          "price_enabled": "Schakel de prijsstatistieken in het PDF-rapport in (standaard: uit).",
+          "price_sensor_revenues": "Entiteit met inkomsten uit elektriciteitsinjectie (standaard: sensor.revenus_injection_electricite).",
+          "price_sensor_withdrawal": "Entiteit met kosten van elektriciteitsafname (standaard: sensor.cout_prelevement_electricite).",
+          "price_sensor_balance": "Entiteit met nettobalanskosten elektriciteit (standaard: sensor.bilan_net_electricite).",
+          "price_sensor_gas": "Entiteit met gaskosten (standaard: sensor.ecopilotmasterp1v1ext_total_gaz_cost).",
+          "price_sensor_water": "Entiteit met waterkosten (standaard: sensor.ecopilotmasterp1v1ext_total_water_cost)."
+        }
+      },
+      "reinstall_confirm": {
+        "title": "Bestaande Energy PDF Report vervangen",
+        "description": "Er is al een Energy PDF Report-configuratie ({title}) gevonden. Bevestig om die te verwijderen en opnieuw te installeren."
+      }
+    },
+    "abort": {
+      "remove_failed": "Het verwijderen van de bestaande configuratie is mislukt. Probeer het opnieuw via Instellingen > Apparaten & diensten.",
+      "already_configured": "Energy PDF Report is al geconfigureerd."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opties voor Energy PDF Report",
+        "description": "Configureer de standaarduitvoerlocatie, rapportageperiode en bestandsnaam voor het genereren van PDF's.",
+        "data": {
+          "co2_sensor_electricity": "CO₂-sensor elektriciteit",
+          "co2_sensor_gas": "CO₂-sensor gas",
+          "co2_sensor_water": "CO₂-sensor water",
+          "co2_sensor_savings": "CO₂-sensor besparingen",
+          "price_enabled": "Prijssensoren inschakelen",
+          "price_sensor_revenues": "Sensor voor inkomsten uit elektriciteitsinjectie",
+          "price_sensor_withdrawal": "Sensor voor kosten van elektriciteitsafname",
+          "price_sensor_balance": "Sensor voor nettobalans elektriciteit",
+          "price_sensor_gas": "Sensor voor gaskosten",
+          "price_sensor_water": "Sensor voor waterkosten"
+        },
+        "data_description": {
+          "co2_sensor_electricity": "Entiteit met elektriciteitsuitstoot (standaard: sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
+          "co2_sensor_gas": "Entiteit met gasuitstoot (standaard: sensor.co2_gaz_jour).",
+          "co2_sensor_water": "Entiteit met watergerelateerde uitstoot (standaard: sensor.co2_eau_jour).",
+          "co2_sensor_savings": "Entiteit met CO₂-besparingen (standaard: sensor.co2_savings_today).",
+          "price_enabled": "Schakel de prijsstatistieken in het PDF-rapport in (standaard: uit).",
+          "price_sensor_revenues": "Entiteit met inkomsten uit elektriciteitsinjectie (standaard: sensor.revenus_injection_electricite).",
+          "price_sensor_withdrawal": "Entiteit met kosten van elektriciteitsafname (standaard: sensor.cout_prelevement_electricite).",
+          "price_sensor_balance": "Entiteit met nettobalanskosten elektriciteit (standaard: sensor.bilan_net_electricite).",
+          "price_sensor_gas": "Entiteit met gaskosten (standaard: sensor.ecopilotmasterp1v1ext_total_gaz_cost).",
+          "price_sensor_water": "Entiteit met waterkosten (standaard: sensor.ecopilotmasterp1v1ext_total_water_cost)."
+        }
+      }
+    }
+  }
+}

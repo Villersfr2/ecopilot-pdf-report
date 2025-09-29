@@ -3,23 +3,33 @@
     "step": {
       "user": {
         "data": {
-
           "co2_sensor_electricity": "Capteur CO₂ électricité",
           "co2_sensor_gas": "Capteur CO₂ gaz",
           "co2_sensor_water": "Capteur CO₂ eau",
-          "co2_sensor_savings": "Capteur économies de CO₂"
+          "co2_sensor_savings": "Capteur économies de CO₂",
+          "price_enabled": "Activer les capteurs de prix",
+          "price_sensor_revenues": "Capteur des revenus d'injection électrique",
+          "price_sensor_withdrawal": "Capteur du coût de prélèvement électrique",
+          "price_sensor_balance": "Capteur du bilan net électrique",
+          "price_sensor_gas": "Capteur du coût du gaz",
+          "price_sensor_water": "Capteur du coût de l'eau"
         },
         "data_description": {
           "co2_sensor_electricity": "Identifiant de l'entité fournissant les émissions d'électricité (par défaut : sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
           "co2_sensor_gas": "Identifiant de l'entité fournissant les émissions de gaz (par défaut : sensor.co2_gaz_jour).",
           "co2_sensor_water": "Identifiant de l'entité fournissant les émissions liées à l'eau (par défaut : sensor.co2_eau_jour).",
-          "co2_sensor_savings": "Identifiant de l'entité indiquant les économies de CO₂ (par défaut : sensor.co2_savings_today)."
-
+          "co2_sensor_savings": "Identifiant de l'entité indiquant les économies de CO₂ (par défaut : sensor.co2_savings_today).",
+          "price_enabled": "Active l'inclusion des métriques de coûts dans le rapport PDF (désactivé par défaut).",
+          "price_sensor_revenues": "Identifiant de l'entité fournissant les revenus d'injection électrique (par défaut : sensor.revenus_injection_electricite).",
+          "price_sensor_withdrawal": "Identifiant de l'entité fournissant les coûts de prélèvement électrique (par défaut : sensor.cout_prelevement_electricite).",
+          "price_sensor_balance": "Identifiant de l'entité fournissant le bilan net électrique (par défaut : sensor.bilan_net_electricite).",
+          "price_sensor_gas": "Identifiant de l'entité fournissant les coûts de gaz (par défaut : sensor.ecopilotmasterp1v1ext_total_gaz_cost).",
+          "price_sensor_water": "Identifiant de l'entité fournissant les coûts d'eau (par défaut : sensor.ecopilotmasterp1v1ext_total_water_cost)."
         }
       },
       "reinstall_confirm": {
         "title": "Remplacer la configuration existante",
-        "description": "Une configuration Energy PDF Report (« {title} ») est déjà présente. Validez pour la supprimer et la réinstaller."
+        "description": "Une configuration Energy PDF Report (« {title} ») est déjà présente. Validez pour la supprimer et la réinstaller."
       }
     },
     "abort": {
@@ -33,19 +43,29 @@
         "title": "Options du rapport PDF énergie",
         "description": "Définissez le répertoire de sortie, la période par défaut et le modèle de nom de fichier utilisés lors de la génération des PDF.",
         "data": {
-
           "co2_sensor_electricity": "Capteur CO₂ électricité",
           "co2_sensor_gas": "Capteur CO₂ gaz",
           "co2_sensor_water": "Capteur CO₂ eau",
-          "co2_sensor_savings": "Capteur économies de CO₂"
+          "co2_sensor_savings": "Capteur économies de CO₂",
+          "price_enabled": "Activer les capteurs de prix",
+          "price_sensor_revenues": "Capteur des revenus d'injection électrique",
+          "price_sensor_withdrawal": "Capteur du coût de prélèvement électrique",
+          "price_sensor_balance": "Capteur du bilan net électrique",
+          "price_sensor_gas": "Capteur du coût du gaz",
+          "price_sensor_water": "Capteur du coût de l'eau"
         },
         "data_description": {
           "co2_sensor_electricity": "Identifiant de l'entité fournissant les émissions d'électricité (par défaut : sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
           "co2_sensor_gas": "Identifiant de l'entité fournissant les émissions de gaz (par défaut : sensor.co2_gaz_jour).",
           "co2_sensor_water": "Identifiant de l'entité fournissant les émissions liées à l'eau (par défaut : sensor.co2_eau_jour).",
-          "co2_sensor_savings": "Identifiant de l'entité indiquant les économies de CO₂ (par défaut : sensor.co2_savings_today)."
+          "co2_sensor_savings": "Identifiant de l'entité indiquant les économies de CO₂ (par défaut : sensor.co2_savings_today).",
+          "price_enabled": "Active l'inclusion des métriques de coûts dans le rapport PDF (désactivé par défaut).",
+          "price_sensor_revenues": "Identifiant de l'entité fournissant les revenus d'injection électrique (par défaut : sensor.revenus_injection_electricite).",
+          "price_sensor_withdrawal": "Identifiant de l'entité fournissant les coûts de prélèvement électrique (par défaut : sensor.cout_prelevement_electricite).",
+          "price_sensor_balance": "Identifiant de l'entité fournissant le bilan net électrique (par défaut : sensor.bilan_net_electricite).",
+          "price_sensor_gas": "Identifiant de l'entité fournissant les coûts de gaz (par défaut : sensor.ecopilotmasterp1v1ext_total_gaz_cost).",
+          "price_sensor_water": "Identifiant de l'entité fournissant les coûts d'eau (par défaut : sensor.ecopilotmasterp1v1ext_total_water_cost)."
         }
-
       }
     }
   }
