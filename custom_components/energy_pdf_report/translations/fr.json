@@ -7,13 +7,21 @@
           "co2_sensor_electricity": "Capteur CO₂ électricité",
           "co2_sensor_gas": "Capteur CO₂ gaz",
           "co2_sensor_water": "Capteur CO₂ eau",
-          "co2_sensor_savings": "Capteur économies de CO₂"
+          "co2_sensor_savings": "Capteur économies de CO₂",
+          "price_sensor_electricity_import": "Capteur coût électricité import",
+          "price_sensor_electricity_export": "Capteur compensation électricité",
+          "price_sensor_gas": "Capteur coût gaz",
+          "price_sensor_water": "Capteur coût eau"
         },
         "data_description": {
           "co2_sensor_electricity": "Identifiant de l'entité fournissant les émissions d'électricité (par défaut : sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
           "co2_sensor_gas": "Identifiant de l'entité fournissant les émissions de gaz (par défaut : sensor.co2_gaz_jour).",
           "co2_sensor_water": "Identifiant de l'entité fournissant les émissions liées à l'eau (par défaut : sensor.co2_eau_jour).",
-          "co2_sensor_savings": "Identifiant de l'entité indiquant les économies de CO₂ (par défaut : sensor.co2_savings_today)."
+          "co2_sensor_savings": "Identifiant de l'entité indiquant les économies de CO₂ (par défaut : sensor.co2_savings_today).",
+          "price_sensor_electricity_import": "Entité fournissant le coût d'import électricité (par défaut : sensor.energy_grid_import_cost).",
+          "price_sensor_electricity_export": "Entité fournissant la compensation export électricité (par défaut : sensor.energy_grid_export_compensation).",
+          "price_sensor_gas": "Entité fournissant le coût du gaz (par défaut : sensor.energy_gas_cost).",
+          "price_sensor_water": "Entité fournissant le coût de l'eau (par défaut : sensor.energy_water_cost)."
 
         }
       },
@@ -37,13 +45,21 @@
           "co2_sensor_electricity": "Capteur CO₂ électricité",
           "co2_sensor_gas": "Capteur CO₂ gaz",
           "co2_sensor_water": "Capteur CO₂ eau",
-          "co2_sensor_savings": "Capteur économies de CO₂"
+          "co2_sensor_savings": "Capteur économies de CO₂",
+          "price_sensor_electricity_import": "Capteur coût électricité import",
+          "price_sensor_electricity_export": "Capteur compensation électricité",
+          "price_sensor_gas": "Capteur coût gaz",
+          "price_sensor_water": "Capteur coût eau"
         },
         "data_description": {
           "co2_sensor_electricity": "Identifiant de l'entité fournissant les émissions d'électricité (par défaut : sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
           "co2_sensor_gas": "Identifiant de l'entité fournissant les émissions de gaz (par défaut : sensor.co2_gaz_jour).",
           "co2_sensor_water": "Identifiant de l'entité fournissant les émissions liées à l'eau (par défaut : sensor.co2_eau_jour).",
-          "co2_sensor_savings": "Identifiant de l'entité indiquant les économies de CO₂ (par défaut : sensor.co2_savings_today)."
+          "co2_sensor_savings": "Identifiant de l'entité indiquant les économies de CO₂ (par défaut : sensor.co2_savings_today).",
+          "price_sensor_electricity_import": "Entité fournissant le coût d'import électricité (par défaut : sensor.energy_grid_import_cost).",
+          "price_sensor_electricity_export": "Entité fournissant la compensation export électricité (par défaut : sensor.energy_grid_export_compensation).",
+          "price_sensor_gas": "Entité fournissant le coût du gaz (par défaut : sensor.energy_gas_cost).",
+          "price_sensor_water": "Entité fournissant le coût de l'eau (par défaut : sensor.energy_water_cost)."
         }
 
       }

@@ -7,13 +7,21 @@
           "co2_sensor_electricity": "Electricity CO₂ sensor",
           "co2_sensor_gas": "Gas CO₂ sensor",
           "co2_sensor_water": "Water CO₂ sensor",
-          "co2_sensor_savings": "Savings CO₂ sensor"
+          "co2_sensor_savings": "Savings CO₂ sensor",
+          "price_sensor_electricity_import": "Electricity import cost sensor",
+          "price_sensor_electricity_export": "Electricity export compensation sensor",
+          "price_sensor_gas": "Gas cost sensor",
+          "price_sensor_water": "Water cost sensor"
         },
         "data_description": {
           "co2_sensor_electricity": "Entity ID providing electricity emissions statistics (default: sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
           "co2_sensor_gas": "Entity ID providing gas emissions statistics (default: sensor.co2_gaz_jour).",
           "co2_sensor_water": "Entity ID providing water emissions statistics (default: sensor.co2_eau_jour).",
-          "co2_sensor_savings": "Entity ID providing CO₂ savings statistics (default: sensor.co2_savings_today)."
+          "co2_sensor_savings": "Entity ID providing CO₂ savings statistics (default: sensor.co2_savings_today).",
+          "price_sensor_electricity_import": "Entity ID providing electricity import costs (default: sensor.energy_grid_import_cost).",
+          "price_sensor_electricity_export": "Entity ID providing electricity export compensation (default: sensor.energy_grid_export_compensation).",
+          "price_sensor_gas": "Entity ID providing gas costs (default: sensor.energy_gas_cost).",
+          "price_sensor_water": "Entity ID providing water costs (default: sensor.energy_water_cost)."
 
         }
       },
@@ -37,13 +45,21 @@
           "co2_sensor_electricity": "Electricity CO₂ sensor",
           "co2_sensor_gas": "Gas CO₂ sensor",
           "co2_sensor_water": "Water CO₂ sensor",
-          "co2_sensor_savings": "Savings CO₂ sensor"
+          "co2_sensor_savings": "Savings CO₂ sensor",
+          "price_sensor_electricity_import": "Electricity import cost sensor",
+          "price_sensor_electricity_export": "Electricity export compensation sensor",
+          "price_sensor_gas": "Gas cost sensor",
+          "price_sensor_water": "Water cost sensor"
         },
         "data_description": {
           "co2_sensor_electricity": "Entity ID providing electricity emissions statistics (default: sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
           "co2_sensor_gas": "Entity ID providing gas emissions statistics (default: sensor.co2_gaz_jour).",
           "co2_sensor_water": "Entity ID providing water emissions statistics (default: sensor.co2_eau_jour).",
-          "co2_sensor_savings": "Entity ID providing CO₂ savings statistics (default: sensor.co2_savings_today)."
+          "co2_sensor_savings": "Entity ID providing CO₂ savings statistics (default: sensor.co2_savings_today).",
+          "price_sensor_electricity_import": "Entity ID providing electricity import costs (default: sensor.energy_grid_import_cost).",
+          "price_sensor_electricity_export": "Entity ID providing electricity export compensation (default: sensor.energy_grid_export_compensation).",
+          "price_sensor_gas": "Entity ID providing gas costs (default: sensor.energy_gas_cost).",
+          "price_sensor_water": "Entity ID providing water costs (default: sensor.energy_water_cost)."
 
         }
       }
