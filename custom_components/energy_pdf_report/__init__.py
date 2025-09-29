@@ -44,17 +44,27 @@ from .const import (
     CONF_FILENAME_PATTERN,
     CONF_OUTPUT_DIR,
     CONF_PERIOD,
+    CONF_PRICE,
+    CONF_PRICE_ELECTRICITY_EXPORT,
+    CONF_PRICE_ELECTRICITY_IMPORT,
+    CONF_PRICE_GAS,
+    CONF_PRICE_WATER,
     CONF_START_DATE,
     CONF_LANGUAGE,
     DEFAULT_CO2,
     DEFAULT_CO2_ELECTRICITY_SENSOR,
     DEFAULT_CO2_GAS_SENSOR,
     DEFAULT_CO2_WATER_SENSOR,
-    DEFAULT_CO2_SAVINGS_SENSOR,   
+    DEFAULT_CO2_SAVINGS_SENSOR,
     DEFAULT_FILENAME_PATTERN,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_LANGUAGE,
     DEFAULT_PERIOD,
+    DEFAULT_PRICE,
+    DEFAULT_PRICE_ELECTRICITY_EXPORT_SENSOR,
+    DEFAULT_PRICE_ELECTRICITY_IMPORT_SENSOR,
+    DEFAULT_PRICE_GAS_SENSOR,
+    DEFAULT_PRICE_WATER_SENSOR,
     DEFAULT_REPORT_TYPE,
     DOMAIN,
     SUPPORTED_LANGUAGES,
@@ -108,6 +118,16 @@ class CO2SensorDefinition:
     entity_id: str
     translation_key: str
     is_saving: bool
+
+
+
+@dataclass(frozen=True, slots=True)
+class PriceSensorDefinition:
+    """Décrit un capteur de coûts/compensations suivi dans le rapport."""
+
+    entity_id: str
+    translation_key: str
+    is_credit: bool
 
 
 
@@ -242,12 +262,41 @@ CO2_SENSOR_CONFIG: tuple[tuple[str, str, bool, str], ...] = (
 )
 
 
+PRICE_SENSOR_CONFIG: tuple[tuple[str, str, bool, str], ...] = (
+    (
+        CONF_PRICE_ELECTRICITY_IMPORT,
+        "price_electricity_import",
+        False,
+        DEFAULT_PRICE_ELECTRICITY_IMPORT_SENSOR,
+    ),
+    (
+        CONF_PRICE_ELECTRICITY_EXPORT,
+        "price_electricity_export",
+        True,
+        DEFAULT_PRICE_ELECTRICITY_EXPORT_SENSOR,
+    ),
+    (
+        CONF_PRICE_GAS,
+        "price_gas",
+        False,
+        DEFAULT_PRICE_GAS_SENSOR,
+    ),
+    (
+        CONF_PRICE_WATER,
+        "price_water",
+        False,
+        DEFAULT_PRICE_WATER_SENSOR,
+    ),
+)
+
+
 _BASE_ALLOWED_OPTION_KEYS: tuple[str, ...] = (
     CONF_OUTPUT_DIR,
     CONF_FILENAME_PATTERN,
     CONF_DEFAULT_REPORT_TYPE,
     CONF_LANGUAGE,
     CONF_CO2,
+    CONF_PRICE,
     CONF_CO2_ELECTRICITY,
     CONF_CO2_GAS,
     CONF_CO2_WATER,
@@ -255,7 +304,7 @@ _BASE_ALLOWED_OPTION_KEYS: tuple[str, ...] = (
 )
 
 _ALLOWED_OPTION_KEYS: tuple[str, ...] = _BASE_ALLOWED_OPTION_KEYS + tuple(
-    option_key for option_key, *_ in CO2_SENSOR_CONFIG
+    option_key for option_key, *_ in CO2_SENSOR_CONFIG + PRICE_SENSOR_CONFIG
 )
 
 
@@ -281,6 +330,33 @@ def _build_co2_sensor_definitions(
 
         definitions.append(
             CO2SensorDefinition(override, translation_key, is_saving)
+        )
+
+    return tuple(definitions)
+
+
+def _build_price_sensor_definitions(
+    options: Mapping[str, Any]
+) -> tuple[PriceSensorDefinition, ...]:
+    """Return price sensor definitions, including user overrides."""
+
+    if not bool(options.get(CONF_PRICE, DEFAULT_PRICE)):
+        return ()
+
+    definitions: list[PriceSensorDefinition] = []
+
+    for option_key, translation_key, is_credit, _default_entity in PRICE_SENSOR_CONFIG:
+        override = options.get(option_key)
+        if isinstance(override, str):
+            override = override.strip()
+        else:
+            override = ""
+
+        if not override:
+            continue
+
+        definitions.append(
+            PriceSensorDefinition(override, translation_key, is_credit)
         )
 
     return tuple(definitions)
@@ -367,8 +443,9 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
     start, end, display_start, display_end, bucket = _resolve_period(hass, call_data)
     co2_enabled = bool(options.get(CONF_CO2, DEFAULT_CO2))
+    price_enabled = bool(options.get(CONF_PRICE, DEFAULT_PRICE))
 
-    metrics = _build_metrics(preferences, co2_enabled)
+    metrics = _build_metrics(preferences, co2_enabled, price_enabled)
     cost_mapping = _build_cost_mapping(preferences)
 
 
@@ -381,6 +458,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     totals = _calculate_totals(metrics, stats_map)
 
     co2_definitions = _build_co2_sensor_definitions(options)
+    price_definitions = _build_price_sensor_definitions(options)
 
     co2_totals: dict[str, float] = {}
     if co2_definitions:
@@ -389,6 +467,15 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
             start,
             end,
             co2_definitions,
+        )
+
+    price_totals: dict[str, float] = {}
+    if price_enabled and price_definitions:
+        price_totals = await _collect_price_statistics(
+            hass,
+            start,
+            end,
+            price_definitions,
         )
 
     output_dir_input = call.data.get(
@@ -437,6 +524,9 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
         co2_definitions,
         co2_totals,
+
+        price_definitions,
+        price_totals,
     )
 
     message_lines = [
@@ -929,6 +1019,7 @@ def _localize_date(day: date, timezone: tzinfo) -> datetime:
 def _build_metrics(
     preferences: "EnergyPreferences" | dict[str, Any],
     co2_enabled: bool = False,
+    price_enabled: bool = False,
 ) -> list[MetricDefinition]:
     """Lister les statistiques à inclure dans le rapport."""
 
@@ -1149,6 +1240,59 @@ async def _collect_co2_statistics(
     return results
 
 
+async def _collect_price_statistics(
+    hass: HomeAssistant,
+    start: datetime,
+    end: datetime,
+    sensors: Iterable[PriceSensorDefinition],
+) -> dict[str, float]:
+    """Assembler les totaux financiers sur la période demandée."""
+
+    definitions = list(sensors)
+    results: dict[str, float] = {
+        definition.translation_key: 0.0 for definition in definitions
+    }
+
+    if not definitions:
+        return results
+
+    entity_map = {definition.entity_id: definition for definition in definitions}
+    statistic_ids = list(entity_map)
+
+    instance = recorder.get_instance(hass)
+
+    stats_map = await instance.async_add_executor_job(
+        recorder_statistics.statistics_during_period,
+        hass,
+        start,
+        end,
+        statistic_ids,
+        "day",
+        None,
+        {"change"},
+    )
+
+    for entity_id in statistic_ids:
+        rows = stats_map.get(entity_id)
+        if not rows:
+            continue
+
+        total = 0.0
+        has_sum = False
+        for row in rows:
+            change_value = row.get("change")
+            if change_value is None:
+                continue
+            has_sum = True
+            total += float(change_value)
+
+        if has_sum:
+            definition = entity_map[entity_id]
+            results[definition.translation_key] = total
+
+    return results
+
+
 def _get_recorder_metadata_with_hass(
     hass: HomeAssistant,
     statistic_ids: set[str],
@@ -1257,6 +1401,9 @@ def _build_pdf(
     co2_definitions: Iterable[CO2SensorDefinition],
     co2_totals: dict[str, float],
 
+    price_definitions: Iterable[PriceSensorDefinition],
+    price_totals: dict[str, float],
+
 ) -> str:
     """Assembler le PDF et le sauvegarder sur disque."""
 
@@ -1312,6 +1459,9 @@ def _build_pdf(
 
         logo_path=logo_path,
     )
+
+    co2_definitions = tuple(co2_definitions)
+    price_definitions = tuple(price_definitions)
 
     cover_details = [
 
@@ -1375,6 +1525,53 @@ def _build_pdf(
 
         builder.add_paragraph(translations.chart_intro)
         builder.add_chart(translations.chart_title, summary_series)
+
+
+    if price_definitions:
+        price_totals_map = price_totals or {}
+        builder.add_section_title(translations.price_section_title)
+        builder.add_paragraph(translations.price_section_intro)
+
+        price_rows: list[tuple[str, str, str]] = []
+        expenses_total = 0.0
+        income_total = 0.0
+
+        for definition in price_definitions:
+            value = price_totals_map.get(definition.translation_key, 0.0)
+            label = translations.price_sensor_labels.get(
+                definition.translation_key, definition.translation_key
+            )
+            impact = (
+                translations.price_income_label
+                if definition.is_credit
+                else translations.price_expense_label
+            )
+            if definition.is_credit:
+                income_total += value
+            else:
+                expenses_total += value
+            price_rows.append((label, _format_number(value), impact))
+
+        if price_rows:
+            price_widths = builder.compute_column_widths((0.5, 0.28, 0.22))
+            builder.add_table(
+                TableConfig(
+                    title=translations.price_table_title,
+                    headers=translations.price_table_headers,
+                    rows=price_rows,
+                    column_widths=price_widths,
+                )
+            )
+
+            balance = income_total - expenses_total
+            builder.add_paragraph(
+                translations.price_balance_sentence.format(
+                    expenses=_format_number(expenses_total),
+                    income=_format_number(income_total),
+                    balance=_format_number(balance),
+                ),
+                bold=True,
+            )
 
 
     totals_map = co2_totals or {}

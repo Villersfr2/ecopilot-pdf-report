@@ -49,6 +49,12 @@ _CATEGORY_COLORS: Tuple[Tuple[str, Tuple[int, int, int]], ...] = (
     ("batterie", (155, 89, 182)),
     ("co₂", (100, 100, 100)),
     ("co2", (100, 100, 100)),
+    ("coût", (243, 156, 18)),
+    ("cout", (243, 156, 18)),
+    ("cost", (243, 156, 18)),
+    ("compensation", (46, 204, 113)),
+    ("revenu", (46, 204, 113)),
+    ("income", (46, 204, 113)),
 )
 
 _CATEGORY_ICON_HINTS: Tuple[Tuple[str, str], ...] = (
@@ -63,6 +69,12 @@ _CATEGORY_ICON_HINTS: Tuple[Tuple[str, str], ...] = (
     ("batterie", "🔋"),
     ("co₂", "🌍"),
     ("co2", "🌍"),
+    ("coût", "💰"),
+    ("cout", "💰"),
+    ("cost", "💰"),
+    ("revenu", "💶"),
+    ("income", "💶"),
+    ("compensation", "💶"),
 )
 
 

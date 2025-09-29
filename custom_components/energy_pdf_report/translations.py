@@ -33,6 +33,14 @@ class ReportTranslations:
     chart_intro: str
     chart_title: str
     chart_units: str
+    price_section_title: str
+    price_section_intro: str
+    price_table_title: str
+    price_table_headers: tuple[str, str, str]
+    price_expense_label: str
+    price_income_label: str
+    price_balance_sentence: str
+    price_sensor_labels: Mapping[str, str]
     co2_section_title: str
     co2_section_intro: str
     co2_table_title: str
@@ -80,6 +88,19 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         chart_intro="La visualisation suivante met en avant la répartition des flux pour chaque catégorie suivie et matérialise l'équilibre production / consommation.",
         chart_title="Répartition par catégorie",
         chart_units="Unités : {unit}",
+        price_section_title="Finances énergie",
+        price_section_intro="Cette section synthétise les dépenses et revenus suivis par vos capteurs financiers.",
+        price_table_title="Dépenses et compensations",
+        price_table_headers=("Source", "Total", "Type"),
+        price_expense_label="Dépense",
+        price_income_label="Revenu",
+        price_balance_sentence="Dépenses totales : {expenses} • Revenus : {income} • Solde net : {balance}.",
+        price_sensor_labels={
+            "price_electricity_import": "Coût électricité (import)",
+            "price_electricity_export": "Compensation export électricité",
+            "price_gas": "Coût gaz",
+            "price_water": "Coût eau",
+        },
         co2_section_title="CO₂",
         co2_section_intro="Cette section met en lumière les émissions et économies de CO₂ enregistrées par les différents postes.",
         co2_table_title="Émissions et économies de CO₂",
@@ -132,6 +153,19 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         chart_intro="The following chart highlights the distribution of flows per category and illustrates the production versus consumption balance.",
         chart_title="Breakdown by category",
         chart_units="Units: {unit}",
+        price_section_title="Energy finances",
+        price_section_intro="This section summarises the expenses and income reported by your financial sensors.",
+        price_table_title="Costs and compensations",
+        price_table_headers=("Source", "Total", "Type"),
+        price_expense_label="Expense",
+        price_income_label="Income",
+        price_balance_sentence="Total expenses: {expenses} • Income: {income} • Net balance: {balance}.",
+        price_sensor_labels={
+            "price_electricity_import": "Electricity import cost",
+            "price_electricity_export": "Electricity export compensation",
+            "price_gas": "Gas cost",
+            "price_water": "Water cost",
+        },
         co2_section_title="CO₂",
         co2_section_intro="This section summarises the CO₂ emissions and savings reported by your sensors.",
         co2_table_title="CO₂ emissions and savings",
@@ -184,6 +218,19 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         chart_intro="De volgende visualisatie toont de verdeling van de stromen per categorie en beeldt het evenwicht tussen productie en verbruik uit.",
         chart_title="Verdeling per categorie",
         chart_units="Eenheden: {unit}",
+        price_section_title="Energiekosten en opbrengsten",
+        price_section_intro="Deze sectie geeft een overzicht van de uitgaven en inkomsten die door je financiële sensoren worden gemeld.",
+        price_table_title="Kosten en compensaties",
+        price_table_headers=("Bron", "Totaal", "Type"),
+        price_expense_label="Kost",
+        price_income_label="Opbrengst",
+        price_balance_sentence="Totale kosten: {expenses} • Opbrengsten: {income} • Nettoresultaat: {balance}.",
+        price_sensor_labels={
+            "price_electricity_import": "Kost elektriciteit (import)",
+            "price_electricity_export": "Compensatie elektriciteit export",
+            "price_gas": "Kost gas",
+            "price_water": "Kost water",
+        },
         co2_section_title="CO₂",
         co2_section_intro="Deze sectie toont de door uw sensoren geregistreerde CO₂-uitstoot en besparingen.",
         co2_table_title="CO₂-uitstoot en besparingen",
