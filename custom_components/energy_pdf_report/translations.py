@@ -29,7 +29,7 @@ class ReportTranslations:
     detail_title: str
     detail_intro: str
     detail_table_title: str
-    detail_headers: tuple[str, str, str, str]
+    detail_headers: tuple[str, str, str, str, str]
     chart_intro: str
     chart_title: str
     chart_units: str
@@ -74,9 +74,9 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         summary_note_totals="Les totaux correspondent à la variation mesurée dans le tableau de bord énergie sur la période sélectionnée.",
         summary_note_negative="Les valeurs négatives indiquent un flux exporté ou une compensation.",
         detail_title="Analyse par catégorie / source",
-        detail_intro="Chaque statistique suivie est listée avec sa contribution précise afin de faciliter l'analyse fine par origine ou type de consommation.",
+        detail_intro="Chaque statistique suivie est listée avec son énergie et, lorsque disponible, son coût afin de faciliter l'analyse fine par origine ou type de consommation.",
         detail_table_title="Détail des statistiques",
-        detail_headers=("Catégorie", "Statistique", "Total", "Unité"),
+        detail_headers=("Catégorie", "Statistique", "Total énergie", "Unité", "Coût"),
         chart_intro="La visualisation suivante met en avant la répartition des flux pour chaque catégorie suivie et matérialise l'équilibre production / consommation.",
         chart_title="Répartition par catégorie",
         chart_units="Unités : {unit}",
@@ -126,9 +126,9 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         summary_note_totals="Totals correspond to the variation measured in the Energy dashboard over the selected period.",
         summary_note_negative="Negative values indicate exported energy or compensation.",
         detail_title="Breakdown by category/source",
-        detail_intro="Each tracked statistic is listed with its contribution to help analyse the data by origin or consumption type.",
+        detail_intro="Each tracked statistic is listed with its energy and, when available, the related cost to help analyse the data by origin or consumption type.",
         detail_table_title="Statistic details",
-        detail_headers=("Category", "Statistic", "Total", "Unit"),
+        detail_headers=("Category", "Statistic", "Energy total", "Unit", "Cost"),
         chart_intro="The following chart highlights the distribution of flows per category and illustrates the production versus consumption balance.",
         chart_title="Breakdown by category",
         chart_units="Units: {unit}",
@@ -178,9 +178,9 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         summary_note_totals="De totalen komen overeen met de verandering die in het Energiadashboard is gemeten tijdens de geselecteerde periode.",
         summary_note_negative="Negatieve waarden geven geëxporteerde energie of compensatie weer.",
         detail_title="Analyse per categorie / bron",
-        detail_intro="Elke gevolgde statistiek wordt getoond met zijn bijdrage om een gedetailleerde analyse per oorsprong of verbruikstype te vergemakkelijken.",
+        detail_intro="Elke gevolgde statistiek toont het energieverbruik en, indien beschikbaar, de bijbehorende kost zodat je gedetailleerd per oorsprong of verbruikstype kan analyseren.",
         detail_table_title="Statistiekdetails",
-        detail_headers=("Categorie", "Statistiek", "Totaal", "Eenheid"),
+        detail_headers=("Categorie", "Statistiek", "Energietotaal", "Eenheid", "Kosten"),
         chart_intro="De volgende visualisatie toont de verdeling van de stromen per categorie en beeldt het evenwicht tussen productie en verbruik uit.",
         chart_title="Verdeling per categorie",
         chart_units="Eenheden: {unit}",

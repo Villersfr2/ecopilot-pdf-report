@@ -369,6 +369,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     co2_enabled = bool(options.get(CONF_CO2, DEFAULT_CO2))
 
     metrics = _build_metrics(preferences, co2_enabled)
+    cost_mapping = _build_cost_mapping(preferences)
 
 
     if not metrics:
@@ -420,6 +421,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
         metrics,
         totals,
         metadata,
+        cost_mapping,
         display_start,
         display_end,
         bucket,
@@ -976,6 +978,44 @@ def _build_metrics(
     return metrics
 
 
+def _build_cost_mapping(
+    preferences: "EnergyPreferences" | dict[str, Any]
+) -> dict[str, str]:
+    """Associer chaque statistique d'énergie à sa statistique de coût."""
+
+    mapping: dict[str, str] = {}
+
+    def _link(energy_stat: str | None, cost_stat: str | None) -> None:
+        if not energy_stat or not cost_stat:
+            return
+        mapping.setdefault(energy_stat, cost_stat)
+
+    for source in preferences.get("energy_sources", []):
+        if not isinstance(source, dict):
+            continue
+
+        source_type = source.get("type")
+
+        if source_type == "grid":
+            for flow in source.get("flow_from", []):
+                if isinstance(flow, dict):
+                    _link(flow.get("stat_energy_from"), flow.get("stat_cost"))
+            for flow in source.get("flow_to", []):
+                if isinstance(flow, dict):
+                    _link(
+                        flow.get("stat_energy_to"),
+                        flow.get("stat_compensation"),
+                    )
+        else:
+            _link(source.get("stat_energy_from"), source.get("stat_cost"))
+
+    for device in preferences.get("device_consumption", []):
+        if isinstance(device, dict):
+            _link(device.get("stat_consumption"), device.get("stat_cost"))
+
+    return mapping
+
+
 async def _collect_statistics(
     hass: HomeAssistant,
     metrics: Iterable[MetricDefinition],
@@ -1200,6 +1240,7 @@ def _build_pdf(
     metrics: list[MetricDefinition],
     totals: dict[str, float],
     metadata: dict[str, tuple[int, StatisticMetaData]],
+    cost_mapping: Mapping[str, str],
     display_start: datetime,
     display_end: datetime,
     bucket: str,
@@ -1313,8 +1354,13 @@ def _build_pdf(
     builder.add_paragraph(translations.detail_intro)
 
 
-    detail_rows = _prepare_detail_rows(metrics, totals, metadata)
-    detail_widths = builder.compute_column_widths((0.26, 0.44, 0.18, 0.12))
+    detail_rows = _prepare_detail_rows(
+        metrics,
+        totals,
+        metadata,
+        cost_mapping,
+    )
+    detail_widths = builder.compute_column_widths((0.24, 0.38, 0.16, 0.08, 0.14))
     builder.add_table(
         TableConfig(
             title=translations.detail_table_title,
@@ -1453,22 +1499,32 @@ def _prepare_detail_rows(
     metrics: Iterable[MetricDefinition],
     totals: dict[str, float],
     metadata: dict[str, tuple[int, StatisticMetaData]],
-) -> list[tuple[str, str, str, str]]:
+    cost_mapping: Mapping[str, str],
+) -> list[tuple[str, str, str, str, str]]:
     """Préparer les lignes détaillées du rapport."""
 
-    details: list[tuple[str, str, float, str]] = []
+    cost_stats = {value for value in cost_mapping.values() if value}
+    details: list[tuple[str, str, float, str, str]] = []
     for metric in metrics:
+        if metric.statistic_id in cost_stats:
+            continue
         total = totals.get(metric.statistic_id, 0.0)
         meta_entry = metadata.get(metric.statistic_id)
         name = _extract_name(meta_entry, metric.statistic_id)
         unit = _extract_unit(meta_entry)
-        details.append((metric.category, name, total, unit))
+        cost_value = ""
+        cost_statistic = cost_mapping.get(metric.statistic_id)
+        if cost_statistic:
+            cost_total = totals.get(cost_statistic)
+            if cost_total is not None:
+                cost_value = _format_number(cost_total)
+        details.append((metric.category, name, total, unit, cost_value))
 
     details.sort(key=lambda item: (item[0], -abs(item[2]), item[1]))
 
-    rows: list[tuple[str, str, str, str]] = []
-    for category, name, value, unit in details:
-        rows.append((category, name, _format_number(value), unit))
+    rows: list[tuple[str, str, str, str, str]] = []
+    for category, name, value, unit, cost in details:
+        rows.append((category, name, _format_number(value), unit, cost))
 
     return rows
 
