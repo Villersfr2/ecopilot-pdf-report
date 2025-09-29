@@ -42,8 +42,8 @@ DEFAULT_CO2_GAS_SENSOR = "sensor.co2_gaz_jour"
 DEFAULT_CO2_WATER_SENSOR = "sensor.co2_eau_jour"
 DEFAULT_CO2_SAVINGS_SENSOR = "sensor.co2_savings_today"
 
-DEFAULT_PRICE_ELECTRICITY_IMPORT_SENSOR = "sensor.energy_grid_import_cost"
-DEFAULT_PRICE_ELECTRICITY_EXPORT_SENSOR = "sensor.energy_grid_export_compensation"
+DEFAULT_PRICE_ELECTRICITY_IMPORT_SENSOR = "sensor.cout_prelevement_electricite"
+DEFAULT_PRICE_ELECTRICITY_EXPORT_SENSOR = "sensor.revenus_injection_electricite"
 DEFAULT_PRICE_GAS_SENSOR = "sensor.energy_gas_cost"
 DEFAULT_PRICE_WATER_SENSOR = "sensor.energy_water_cost"
 
