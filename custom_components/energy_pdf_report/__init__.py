@@ -1485,8 +1485,17 @@ def _extract_name(
 ) -> str:
     """Récupérer le nom lisible d'une statistique."""
 
-    if metadata and metadata[1].get("name"):
-        return str(metadata[1]["name"])
+    if metadata:
+        # Essayer le friendly_name stocké dans les métadonnées
+        name = metadata[1].get("name")
+        if name and str(name).strip():
+            return str(name)
+
+        # Essayer une description éventuelle
+        desc = metadata[1].get("statistic_id")
+        if desc and str(desc).strip():
+            return str(desc)
+
     return fallback
 
 
