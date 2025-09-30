@@ -1608,7 +1608,7 @@ def _build_pdf(
         metadata,
         cost_mapping,
     )
-    detail_widths = builder.compute_column_widths((0.24, 0.38, 0.16, 0.08, 0.14))
+    detail_widths = builder.compute_column_widths((0.25, 0.51, 0.14, 0.10))
     builder.add_table(
         TableConfig(
             title=translations.detail_table_title,
@@ -1839,11 +1839,11 @@ def _prepare_detail_rows(
     totals: dict[str, float],
     metadata: dict[str, tuple[int, StatisticMetaData]],
     cost_mapping: Mapping[str, str],
-) -> list[tuple[str, str, str, str, str]]:
+) -> list[tuple[str, str, str, str]]:
     """Préparer les lignes détaillées du rapport."""
 
     cost_stats = {value for value in cost_mapping.values() if value}
-    details: list[tuple[str, str, float, str, str]] = []
+    details: list[tuple[str, str, float, str]] = []
     for metric in metrics:
         if metric.statistic_id in cost_stats:
             continue
@@ -1851,19 +1851,13 @@ def _prepare_detail_rows(
         meta_entry = metadata.get(metric.statistic_id)
         name = _extract_name(meta_entry, metric.statistic_id)
         unit = _extract_unit(meta_entry)
-        cost_value = ""
-        cost_statistic = cost_mapping.get(metric.statistic_id)
-        if cost_statistic:
-            cost_total = totals.get(cost_statistic)
-            if cost_total is not None:
-                cost_value = _format_number(cost_total)
-        details.append((metric.category, name, total, unit, cost_value))
+        details.append((metric.category, name, total, unit))
 
     details.sort(key=lambda item: (item[0], -abs(item[2]), item[1]))
 
-    rows: list[tuple[str, str, str, str, str]] = []
-    for category, name, value, unit, cost in details:
-        rows.append((category, name, _format_number(value), unit, cost))
+    rows: list[tuple[str, str, str, str]] = []
+    for category, name, value, unit in details:
+        rows.append((category, name, _format_number(value), unit))
 
     return rows
 
