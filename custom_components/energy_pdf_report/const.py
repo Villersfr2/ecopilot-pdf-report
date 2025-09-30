@@ -37,6 +37,8 @@ CONF_PRICE_ELECTRICITY_EXPORT = "price_sensor_electricity_export"
 CONF_PRICE_GAS = "price_sensor_gas"
 CONF_PRICE_WATER = "price_sensor_water"
 
+CONF_OPENAI_API_KEY = "openai_api_key"
+
 DEFAULT_CO2_ELECTRICITY_SENSOR = "sensor.co2_emissions_today"
 DEFAULT_CO2_GAS_SENSOR = "sensor.co2_gaz_jour"
 DEFAULT_CO2_WATER_SENSOR = "sensor.co2_eau_jour"

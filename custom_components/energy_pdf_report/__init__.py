@@ -51,6 +51,7 @@ from .const import (
     CONF_PRICE_WATER,
     CONF_START_DATE,
     CONF_LANGUAGE,
+    CONF_OPENAI_API_KEY,
     DEFAULT_CO2,
     DEFAULT_CO2_ELECTRICITY_SENSOR,
     DEFAULT_CO2_GAS_SENSOR,
@@ -71,6 +72,7 @@ from .const import (
     SERVICE_GENERATE_REPORT,
     VALID_PERIODS,
 )
+from .ai_helper import FALLBACK_MESSAGE, generate_advice
 from .pdf import EnergyPDFBuilder, TableConfig, _decorate_category
 
 from .translations import ReportTranslations, get_report_translations
@@ -322,6 +324,7 @@ _BASE_ALLOWED_OPTION_KEYS: tuple[str, ...] = (
     CONF_CO2_GAS,
     CONF_CO2_WATER,
     CONF_CO2_SAVINGS,
+    CONF_OPENAI_API_KEY,
 )
 
 _ALLOWED_OPTION_KEYS: tuple[str, ...] = _BASE_ALLOWED_OPTION_KEYS + tuple(
@@ -537,6 +540,28 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
     translations = get_report_translations(language)
 
+    conclusion_summary_for_advice = _prepare_conclusion_summary(
+        metrics,
+        totals,
+        metadata,
+    )
+    conclusion_prompt_text = _compose_conclusion_prompt(
+        translations, conclusion_summary_for_advice
+    )
+
+    raw_api_key = options.get(CONF_OPENAI_API_KEY)
+    api_key: str | None
+    if isinstance(raw_api_key, str):
+        api_key = raw_api_key.strip() or None
+    else:
+        api_key = None
+
+    advice_text = await generate_advice(
+        conclusion_prompt_text,
+        api_key,
+        translations.language,
+    )
+
     pdf_path = await hass.async_add_executor_job(
         _build_pdf,
         metrics,
@@ -561,6 +586,9 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
 
         price_definitions,
         price_totals,
+
+        advice_text,
+        conclusion_summary_for_advice,
     )
 
     message_lines = [
@@ -1468,6 +1496,9 @@ def _build_pdf(
     price_definitions: Iterable[PriceSensorDefinition],
     price_totals: dict[str, float],
 
+    advice_text: str,
+    conclusion_summary: ConclusionSummary | None = None,
+
 ) -> str:
     """Assembler le PDF et le sauvegarder sur disque."""
 
@@ -1548,11 +1579,12 @@ def _build_pdf(
 
 
     summary_rows, summary_series = _prepare_summary_rows(metrics, totals, metadata)
-    conclusion_summary = _prepare_conclusion_summary(
-        metrics,
-        totals,
-        metadata,
-    )
+    if conclusion_summary is None:
+        conclusion_summary = _prepare_conclusion_summary(
+            metrics,
+            totals,
+            metadata,
+        )
 
     summary_display_rows = list(summary_rows)
     summary_emphasize_rows: list[int] = list(range(len(summary_display_rows)))
@@ -1720,50 +1752,25 @@ def _build_pdf(
     if conclusion_summary:
         builder.add_section_title(translations.conclusion_title)
 
-        formatted_values = conclusion_summary.formatted
-        if conclusion_summary.has_battery:
-            builder.add_paragraph(
-                translations.conclusion_overview_with_battery.format(
-                    production=formatted_values["production"],
-                    direct=formatted_values["direct"],
-                    indirect=formatted_values["indirect"],
-                    imported=formatted_values["imported"],
-                    exported=formatted_values["exported"],
-                    consumption=formatted_values["consumption"],
-                    total_consumption=formatted_values["total_consumption"],
-                    untracked_consumption=formatted_values[
-                        "untracked_consumption"
-                    ],
-                )
-            )
-        else:
-            builder.add_paragraph(
-                translations.conclusion_overview_without_battery.format(
-                    production=formatted_values["production"],
-                    direct=formatted_values["direct"],
-                    imported=formatted_values["imported"],
-                    exported=formatted_values["exported"],
-                    consumption=formatted_values["consumption"],
-                    total_consumption=formatted_values["total_consumption"],
-                    untracked_consumption=formatted_values[
-                        "untracked_consumption"
-                    ],
-                )
-            )
+        overview_text = _render_conclusion_overview(translations, conclusion_summary)
+        builder.add_paragraph(overview_text)
 
+        formatted_values = conclusion_summary.formatted
         table_rows: list[tuple[str, str]] = [
             (translations.conclusion_row_direct_label, formatted_values["direct"]),
         ]
         emphasize_rows: list[int] = [0]
 
         if conclusion_summary.has_battery:
-            table_rows.append(
-                (
-                    translations.conclusion_row_indirect_label,
-                    formatted_values["indirect"],
+            indirect_value = formatted_values.get("indirect")
+            if indirect_value:
+                table_rows.append(
+                    (
+                        translations.conclusion_row_indirect_label,
+                        indirect_value,
+                    )
                 )
-            )
-            emphasize_rows.append(len(table_rows) - 1)
+                emphasize_rows.append(len(table_rows) - 1)
 
         table_rows.extend(
             [
@@ -1806,6 +1813,13 @@ def _build_pdf(
         )
 
     builder.add_paragraph(translations.conclusion_hint)
+
+    advice_content = advice_text.strip() if advice_text else ""
+    if not advice_content:
+        advice_content = FALLBACK_MESSAGE
+
+    builder.add_section_title(translations.advice_section_title)
+    builder.add_paragraph(advice_content)
 
     builder.add_footer(translations.footer_path.format(path=file_path))
 
@@ -1976,6 +1990,92 @@ def _prepare_conclusion_summary(
         has_battery=battery_detected,
         energy_unit=energy_unit,
         formatted=formatted_values,
+    )
+
+
+def _render_conclusion_overview(
+    translations: ReportTranslations, summary: ConclusionSummary
+) -> str:
+    """Construire le paragraphe de conclusion affiché et envoyé à l’IA."""
+
+    formatted = summary.formatted
+
+    if summary.has_battery and summary.indirect is not None:
+        return translations.conclusion_overview_with_battery.format(
+            production=formatted["production"],
+            direct=formatted["direct"],
+            indirect=formatted.get("indirect", ""),
+            imported=formatted["imported"],
+            exported=formatted["exported"],
+            consumption=formatted["consumption"],
+            total_consumption=formatted["total_consumption"],
+            untracked_consumption=formatted["untracked_consumption"],
+        )
+
+    return translations.conclusion_overview_without_battery.format(
+        production=formatted["production"],
+        direct=formatted["direct"],
+        imported=formatted["imported"],
+        exported=formatted["exported"],
+        consumption=formatted["consumption"],
+        total_consumption=formatted["total_consumption"],
+        untracked_consumption=formatted["untracked_consumption"],
+    )
+
+
+def _compose_conclusion_prompt(
+    translations: ReportTranslations, summary: ConclusionSummary | None
+) -> str:
+    """Assembler un texte descriptif passé à l’IA pour générer un conseil."""
+
+    if summary is None:
+        return translations.conclusion_hint
+
+    overview = _render_conclusion_overview(translations, summary)
+    formatted = summary.formatted
+
+    rows: list[tuple[str, str]] = [
+        (translations.conclusion_row_direct_label, formatted["direct"]),
+    ]
+
+    if summary.has_battery and summary.indirect is not None:
+        rows.append(
+            (translations.conclusion_row_indirect_label, formatted["indirect"])
+        )
+
+    rows.extend(
+        [
+            (
+                translations.conclusion_row_production_label,
+                formatted["production"],
+            ),
+            (
+                translations.conclusion_row_import_label,
+                formatted["imported"],
+            ),
+            (
+                translations.conclusion_row_export_label,
+                formatted["exported"],
+            ),
+            (
+                translations.conclusion_row_consumption_label,
+                formatted["consumption"],
+            ),
+            (
+                translations.conclusion_row_total_consumption_label,
+                formatted["total_consumption"],
+            ),
+            (
+                translations.conclusion_row_untracked_consumption_label,
+                formatted["untracked_consumption"],
+            ),
+        ]
+    )
+
+    table_lines = "\n".join(f"{label} : {value}" for label, value in rows)
+
+    return (
+        f"{overview}\n\n{translations.conclusion_table_title} :\n{table_lines}"
     )
 
 

@@ -4,6 +4,7 @@
       "user": {
         "data": {
 
+          "openai_api_key": "Clé API OpenAI",
           "co2_sensor_electricity": "Capteur CO₂ électricité",
           "co2_sensor_gas": "Capteur CO₂ gaz",
           "co2_sensor_water": "Capteur CO₂ eau",
@@ -14,6 +15,7 @@
           "price_sensor_water": "Capteur coût eau"
         },
         "data_description": {
+          "openai_api_key": "Clé API utilisée pour contacter OpenAI et générer les conseils EcoPilot.",
           "co2_sensor_electricity": "Identifiant de l'entité fournissant les émissions d'électricité (par défaut : sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
           "co2_sensor_gas": "Identifiant de l'entité fournissant les émissions de gaz (par défaut : sensor.co2_gaz_jour).",
           "co2_sensor_water": "Identifiant de l'entité fournissant les émissions liées à l'eau (par défaut : sensor.co2_eau_jour).",
@@ -42,6 +44,7 @@
         "description": "Définissez le répertoire de sortie, la période par défaut et le modèle de nom de fichier utilisés lors de la génération des PDF.",
         "data": {
 
+          "openai_api_key": "Clé API OpenAI",
           "co2_sensor_electricity": "Capteur CO₂ électricité",
           "co2_sensor_gas": "Capteur CO₂ gaz",
           "co2_sensor_water": "Capteur CO₂ eau",
@@ -52,6 +55,7 @@
           "price_sensor_water": "Capteur coût eau"
         },
         "data_description": {
+          "openai_api_key": "Clé API utilisée pour contacter OpenAI et générer les conseils EcoPilot.",
           "co2_sensor_electricity": "Identifiant de l'entité fournissant les émissions d'électricité (par défaut : sensor.co2_scope_2_electricite_co2_prod_daily_precis).",
           "co2_sensor_gas": "Identifiant de l'entité fournissant les émissions de gaz (par défaut : sensor.co2_gaz_jour).",
           "co2_sensor_water": "Identifiant de l'entité fournissant les émissions liées à l'eau (par défaut : sensor.co2_eau_jour).",
