@@ -50,8 +50,16 @@ class ReportTranslations:
     co2_balance_sentence: str
     co2_sensor_labels: Mapping[str, str]
     conclusion_title: str
-    conclusion_total: str
-    conclusion_dominant: str
+    conclusion_overview_without_battery: str
+    conclusion_overview_with_battery: str
+    conclusion_table_title: str
+    conclusion_table_headers: tuple[str, str]
+    conclusion_row_direct_label: str
+    conclusion_row_indirect_label: str
+    conclusion_row_production_label: str
+    conclusion_row_import_label: str
+    conclusion_row_export_label: str
+    conclusion_row_consumption_label: str
     conclusion_hint: str
     footer_path: str
     footer_page: str
@@ -117,8 +125,16 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
 
         },
         conclusion_title="Conclusion",
-        conclusion_total="Le flux net observé sur la période atteint {total}.",
-        conclusion_dominant="La catégorie la plus significative est {category} avec {value}.",
+        conclusion_overview_without_battery="Sur la période, la production solaire atteint {production} dont {direct} autoconsommés directement. Les importations réseau totalisent {imported} tandis que {exported} ont été réinjectés, pour une consommation des appareils de {consumption}.",
+        conclusion_overview_with_battery="Sur la période, la production solaire atteint {production} : {direct} ont été autoconsommés directement et {indirect} via la batterie. Les importations réseau totalisent {imported} tandis que {exported} ont été réinjectés, pour une consommation des appareils de {consumption}.",
+        conclusion_table_title="Synthèse des flux énergétiques",
+        conclusion_table_headers=("Flux", "Total"),
+        conclusion_row_direct_label="Autoconsommation directe",
+        conclusion_row_indirect_label="Autoconsommation indirecte",
+        conclusion_row_production_label="Production solaire",
+        conclusion_row_import_label="Import réseau",
+        conclusion_row_export_label="Export réseau",
+        conclusion_row_consumption_label="Consommation appareils",
         conclusion_hint="Pour approfondir l'évolution temporelle et comparer les périodes, référez-vous au tableau de bord Énergie de Home Assistant.",
         footer_path="Chemin du fichier : {path}",
         footer_page="Page {current} sur {total}",
@@ -182,8 +198,16 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
 
         },
         conclusion_title="Conclusion",
-        conclusion_total="The net flow observed over the period is {total}.",
-        conclusion_dominant="The most significant category is {category} with {value}.",
+        conclusion_overview_without_battery="Over the period, solar production reached {production} with {direct} consumed directly. Grid imports totalled {imported} while {exported} were sent back, and devices used {consumption}.",
+        conclusion_overview_with_battery="Over the period, solar production reached {production}: {direct} were consumed directly and {indirect} via the battery. Grid imports totalled {imported} while {exported} were sent back, and devices used {consumption}.",
+        conclusion_table_title="Energy flow overview",
+        conclusion_table_headers=("Flow", "Total"),
+        conclusion_row_direct_label="Direct self-consumption",
+        conclusion_row_indirect_label="Indirect self-consumption",
+        conclusion_row_production_label="Solar production",
+        conclusion_row_import_label="Grid import",
+        conclusion_row_export_label="Grid export",
+        conclusion_row_consumption_label="Device consumption",
         conclusion_hint="For deeper time-based analysis and comparisons, refer to Home Assistant's Energy dashboard.",
         footer_path="File path: {path}",
         footer_page="Page {current} of {total}",
@@ -247,8 +271,16 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
 
         },
         conclusion_title="Conclusie",
-        conclusion_total="De netto stroom over de periode bedraagt {total}.",
-        conclusion_dominant="De meest bepalende categorie is {category} met {value}.",
+        conclusion_overview_without_battery="In de periode bedroeg de zonneproductie {production} waarvan {direct} direct werd zelfverbruikt. Netimport kwam uit op {imported} terwijl {exported} werd teruggeleverd en toestellen verbruikten {consumption}.",
+        conclusion_overview_with_battery="In de periode bedroeg de zonneproductie {production}: {direct} werd rechtstreeks verbruikt en {indirect} via de batterij. Netimport bedroeg {imported} terwijl {exported} werd teruggeleverd en toestellen verbruikten {consumption}.",
+        conclusion_table_title="Overzicht energiestromen",
+        conclusion_table_headers=("Stroom", "Totaal"),
+        conclusion_row_direct_label="Direct eigen verbruik",
+        conclusion_row_indirect_label="Indirect eigen verbruik",
+        conclusion_row_production_label="Zonneproductie",
+        conclusion_row_import_label="Netimport",
+        conclusion_row_export_label="Netexport",
+        conclusion_row_consumption_label="Verbruik toestellen",
         conclusion_hint="Raadpleeg het Energiadashboard van Home Assistant voor een diepere tijdsanalyse en vergelijkingen.",
         footer_path="Bestandspad: {path}",
         footer_page="Pagina {current} van {total}",

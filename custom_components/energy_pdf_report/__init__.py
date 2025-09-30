@@ -142,6 +142,23 @@ class DashboardSelection:
     preferences: dict[str, Any]
 
 
+@dataclass(frozen=True, slots=True)
+class ConclusionSummary:
+    """Résultat agrégé pour la conclusion du rapport."""
+
+    production: float
+    imported: float
+    exported: float
+    consumption: float
+    charge: float
+    discharge: float
+    direct: float
+    indirect: float | None
+    has_battery: bool
+    energy_unit: str | None
+    formatted: Mapping[str, str]
+
+
 def _recorder_metadata_requires_hass() -> bool:
     """Déterminer si recorder.get_metadata attend l'instance hass."""
 
@@ -1669,31 +1686,83 @@ def _build_pdf(
 
 
 
+    conclusion_summary = None
     if summary_series:
-        units = {unit for _, _, unit in summary_series if unit}
-        unit_label = units.pop() if len(units) == 1 else None
-        total_value = sum(value for _, value, _ in summary_series)
-        formatted_total = _format_number(total_value)
-        if unit_label:
-            formatted_total = f"{formatted_total} {unit_label}"
-        builder.add_paragraph(
-
-            translations.conclusion_total.format(total=formatted_total),
-
-            bold=True,
+        conclusion_summary = _prepare_conclusion_summary(
+            metrics,
+            totals,
+            metadata,
         )
 
-        dominant_category, dominant_value, dominant_unit = max(
-            summary_series, key=lambda item: abs(item[1])
-        )
-        formatted_dominant = _format_number(dominant_value)
-        if dominant_unit:
-            formatted_dominant = f"{formatted_dominant} {dominant_unit}"
-        builder.add_paragraph(
+    if conclusion_summary:
+        builder.add_section_title(translations.conclusion_title)
 
-            translations.conclusion_dominant.format(
-                category=dominant_category,
-                value=formatted_dominant,
+        formatted_values = conclusion_summary.formatted
+        if conclusion_summary.has_battery:
+            builder.add_paragraph(
+                translations.conclusion_overview_with_battery.format(
+                    production=formatted_values["production"],
+                    direct=formatted_values["direct"],
+                    indirect=formatted_values["indirect"],
+                    imported=formatted_values["imported"],
+                    exported=formatted_values["exported"],
+                    consumption=formatted_values["consumption"],
+                )
+            )
+        else:
+            builder.add_paragraph(
+                translations.conclusion_overview_without_battery.format(
+                    production=formatted_values["production"],
+                    direct=formatted_values["direct"],
+                    imported=formatted_values["imported"],
+                    exported=formatted_values["exported"],
+                    consumption=formatted_values["consumption"],
+                )
+            )
+
+        table_rows: list[tuple[str, str]] = [
+            (translations.conclusion_row_direct_label, formatted_values["direct"]),
+        ]
+        emphasize_rows: list[int] = [0]
+
+        if conclusion_summary.has_battery:
+            table_rows.append(
+                (
+                    translations.conclusion_row_indirect_label,
+                    formatted_values["indirect"],
+                )
+            )
+            emphasize_rows.append(len(table_rows) - 1)
+
+        table_rows.extend(
+            [
+                (
+                    translations.conclusion_row_production_label,
+                    formatted_values["production"],
+                ),
+                (
+                    translations.conclusion_row_import_label,
+                    formatted_values["imported"],
+                ),
+                (
+                    translations.conclusion_row_export_label,
+                    formatted_values["exported"],
+                ),
+                (
+                    translations.conclusion_row_consumption_label,
+                    formatted_values["consumption"],
+                ),
+            ]
+        )
+
+        table_widths = builder.compute_column_widths((0.62, 0.38))
+        builder.add_table(
+            TableConfig(
+                title=translations.conclusion_table_title,
+                headers=translations.conclusion_table_headers,
+                rows=table_rows,
+                column_widths=table_widths,
+                emphasize_rows=emphasize_rows,
             )
         )
 
@@ -1770,6 +1839,98 @@ def _prepare_detail_rows(
 
     return rows
 
+_CONCLUSION_CATEGORY_MAP = {
+    "Production solaire": "production",
+    "Import réseau": "imported",
+    "Export réseau": "exported",
+    "Consommation appareils": "consumption",
+    "Charge batterie": "charge",
+    "Décharge batterie": "discharge",
+}
+
+
+def _prepare_conclusion_summary(
+    metrics: Iterable[MetricDefinition],
+    totals: Mapping[str, float],
+    metadata: Mapping[str, tuple[int, StatisticMetaData]],
+) -> ConclusionSummary | None:
+    """Assembler les données nécessaires pour la conclusion."""
+
+    category_totals: dict[str, float] = {
+        value: 0.0 for value in _CONCLUSION_CATEGORY_MAP.values()
+    }
+    energy_unit: str | None = None
+    has_values = False
+
+    for metric in metrics:
+        key = _CONCLUSION_CATEGORY_MAP.get(metric.category)
+        if key is None:
+            continue
+
+        total = totals.get(metric.statistic_id)
+        if total is None:
+            continue
+
+        has_values = True
+        category_totals[key] += total
+
+        if energy_unit:
+            continue
+        unit_candidate = _extract_unit(metadata.get(metric.statistic_id)).strip()
+        if unit_candidate:
+            energy_unit = unit_candidate
+
+    if not has_values:
+        return None
+
+    production = category_totals["production"]
+    imported = category_totals["imported"]
+    exported = category_totals["exported"]
+    consumption = category_totals["consumption"]
+    charge = category_totals["charge"]
+    discharge = category_totals["discharge"]
+
+    direct_self_consumption = max(
+        production - max(exported, 0.0) - max(charge, 0.0),
+        0.0,
+    )
+
+    battery_detected = any(
+        metric.category in ("Charge batterie", "Décharge batterie") for metric in metrics
+    )
+
+    indirect_self_consumption: float | None = None
+    if battery_detected:
+        indirect_self_consumption = max(min(discharge, charge), 0.0)
+
+    formatted_values: dict[str, str] = {
+        "production": _format_with_unit(production, energy_unit),
+        "direct": _format_with_unit(direct_self_consumption, energy_unit),
+        "imported": _format_with_unit(imported, energy_unit),
+        "exported": _format_with_unit(exported, energy_unit),
+        "consumption": _format_with_unit(consumption, energy_unit),
+    }
+
+    if indirect_self_consumption is not None:
+        formatted_values["indirect"] = _format_with_unit(
+            indirect_self_consumption, energy_unit
+        )
+
+    return ConclusionSummary(
+        production=production,
+        imported=imported,
+        exported=exported,
+        consumption=consumption,
+        charge=charge,
+        discharge=discharge,
+        direct=direct_self_consumption,
+        indirect=indirect_self_consumption,
+        has_battery=battery_detected,
+        energy_unit=energy_unit,
+        formatted=formatted_values,
+    )
+
+
 def _extract_unit(metadata: tuple[int, StatisticMetaData] | None) -> str:
     """Récupérer l'unité depuis les métadonnées."""
 
@@ -1822,6 +1983,13 @@ def _format_number(value: float) -> str:
         formatted = f"{value:,.3f}"
 
     return formatted.replace(",", " ")
+
+
+def _format_with_unit(value: float, unit: str | None) -> str:
+    """Associer un formatage numérique avec une unité si disponible."""
+
+    formatted = _format_number(value)
+    return f"{formatted} {unit}".strip() if unit else formatted
 
 
 __all__ = ["async_setup", "async_setup_entry", "async_unload_entry"]
