@@ -154,6 +154,8 @@ class ConclusionSummary:
     discharge: float
     direct: float
     indirect: float | None
+    total_estimated_consumption: float
+    untracked_consumption: float
     has_battery: bool
     energy_unit: str | None
     formatted: Mapping[str, str]
@@ -1557,26 +1559,19 @@ def _build_pdf(
 
     if conclusion_summary:
         energy_unit = conclusion_summary.energy_unit or ""
-        total_consumption = (
-            conclusion_summary.production
-            + conclusion_summary.imported
-            + conclusion_summary.discharge
-            - conclusion_summary.exported
-            - conclusion_summary.charge
-        )
-        tracked_consumption = conclusion_summary.consumption
-        untracked_consumption = max(total_consumption - tracked_consumption, 0.0)
 
         summary_display_rows = [
             (
                 translations.summary_row_total_consumption_label,
-                _format_number(total_consumption),
+                _format_number(
+                    conclusion_summary.total_estimated_consumption
+                ),
                 energy_unit,
             ),
             *summary_rows,
             (
                 translations.summary_row_untracked_consumption_label,
-                _format_number(untracked_consumption),
+                _format_number(conclusion_summary.untracked_consumption),
                 energy_unit,
             ),
         ]
@@ -1735,6 +1730,10 @@ def _build_pdf(
                     imported=formatted_values["imported"],
                     exported=formatted_values["exported"],
                     consumption=formatted_values["consumption"],
+                    total_consumption=formatted_values["total_consumption"],
+                    untracked_consumption=formatted_values[
+                        "untracked_consumption"
+                    ],
                 )
             )
         else:
@@ -1745,6 +1744,10 @@ def _build_pdf(
                     imported=formatted_values["imported"],
                     exported=formatted_values["exported"],
                     consumption=formatted_values["consumption"],
+                    total_consumption=formatted_values["total_consumption"],
+                    untracked_consumption=formatted_values[
+                        "untracked_consumption"
+                    ],
                 )
             )
 
@@ -1779,6 +1782,14 @@ def _build_pdf(
                 (
                     translations.conclusion_row_consumption_label,
                     formatted_values["consumption"],
+                ),
+                (
+                    translations.conclusion_row_total_consumption_label,
+                    formatted_values["total_consumption"],
+                ),
+                (
+                    translations.conclusion_row_untracked_consumption_label,
+                    formatted_values["untracked_consumption"],
                 ),
             ]
         )
@@ -1925,12 +1936,25 @@ def _prepare_conclusion_summary(
     if battery_detected:
         indirect_self_consumption = max(min(discharge, charge), 0.0)
 
+    total_estimated_consumption = (
+        production + imported + discharge - exported - charge
+    )
+    untracked_consumption = max(
+        total_estimated_consumption - consumption, 0.0
+    )
+
     formatted_values: dict[str, str] = {
         "production": _format_with_unit(production, energy_unit),
         "direct": _format_with_unit(direct_self_consumption, energy_unit),
         "imported": _format_with_unit(imported, energy_unit),
         "exported": _format_with_unit(exported, energy_unit),
         "consumption": _format_with_unit(consumption, energy_unit),
+        "total_consumption": _format_with_unit(
+            total_estimated_consumption, energy_unit
+        ),
+        "untracked_consumption": _format_with_unit(
+            untracked_consumption, energy_unit
+        ),
     }
 
     if indirect_self_consumption is not None:
@@ -1947,6 +1971,8 @@ def _prepare_conclusion_summary(
         discharge=discharge,
         direct=direct_self_consumption,
         indirect=indirect_self_consumption,
+        total_estimated_consumption=total_estimated_consumption,
+        untracked_consumption=untracked_consumption,
         has_battery=battery_detected,
         energy_unit=energy_unit,
         formatted=formatted_values,
