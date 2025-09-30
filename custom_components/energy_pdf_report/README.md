@@ -2,6 +2,8 @@
 
 Ce composant personnalisé Home Assistant ajoute un service `energy_pdf_report.generate` permettant de générer un rapport PDF à partir des statistiques du tableau de bord Énergie. Le fichier PDF inclut une synthèse par catégorie ainsi qu'un détail de toutes les statistiques utilisées.
 
+Le résumé met désormais en avant la consommation totale estimée (production + importations + décharge − exportations − charge) et la part non suivie, calculée en soustrayant la consommation des appareils suivis du total estimé.
+
 ## Installation rapide
 1. Copier le dossier `energy_pdf_report` dans le répertoire `custom_components` de votre installation Home Assistant.
 2. Redémarrer Home Assistant.

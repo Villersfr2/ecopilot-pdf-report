@@ -24,6 +24,8 @@ class ReportTranslations:
     summary_intro: str
     summary_table_title: str
     summary_headers: tuple[str, str, str]
+    summary_row_total_consumption_label: str
+    summary_row_untracked_consumption_label: str
     summary_note_totals: str
     summary_note_negative: str
     detail_title: str
@@ -87,6 +89,8 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         summary_intro="Cette section présente les totaux consolidés sur la période analysée.",
         summary_table_title="Synthèse par catégorie",
         summary_headers=("Catégorie", "Total", "Unité"),
+        summary_row_total_consumption_label="Consommation totale estimée",
+        summary_row_untracked_consumption_label="Consommation non suivie",
         summary_note_totals="Les totaux correspondent à la variation mesurée dans le tableau de bord énergie sur la période sélectionnée.",
         summary_note_negative="Les valeurs négatives indiquent un flux exporté ou une compensation.",
         detail_title="Analyse par catégorie / source",
@@ -160,6 +164,8 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         summary_intro="This section presents the consolidated totals for the analysed period.",
         summary_table_title="Summary by category",
         summary_headers=("Category", "Total", "Unit"),
+        summary_row_total_consumption_label="Estimated total consumption",
+        summary_row_untracked_consumption_label="Untracked consumption",
         summary_note_totals="Totals correspond to the variation measured in the Energy dashboard over the selected period.",
         summary_note_negative="Negative values indicate exported energy or compensation.",
         detail_title="Breakdown by category/source",
@@ -233,6 +239,8 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         summary_intro="Deze sectie toont de totale waarden voor de geanalyseerde periode.",
         summary_table_title="Overzicht per categorie",
         summary_headers=("Categorie", "Totaal", "Eenheid"),
+        summary_row_total_consumption_label="Geschat totaalverbruik",
+        summary_row_untracked_consumption_label="Niet-opgevolgd verbruik",
         summary_note_totals="De totalen komen overeen met de verandering die in het Energiadashboard is gemeten tijdens de geselecteerde periode.",
         summary_note_negative="Negatieve waarden geven geëxporteerde energie of compensatie weer.",
         detail_title="Analyse per categorie / bron",
