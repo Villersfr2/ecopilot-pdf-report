@@ -96,6 +96,8 @@ SERVICE_GENERATE_SCHEMA = vol.Schema(
         vol.Optional(CONF_LANGUAGE): vol.In(SUPPORTED_LANGUAGES),
 
         vol.Optional(CONF_DASHBOARD): cv.string,
+        vol.Optional(CONF_CO2): cv.boolean,
+        vol.Optional(CONF_PRICE): cv.boolean,
     }
 )
 
@@ -442,8 +444,16 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     call_data[CONF_PERIOD] = period
 
     start, end, display_start, display_end, bucket = _resolve_period(hass, call_data)
-    co2_enabled = bool(options.get(CONF_CO2, DEFAULT_CO2))
-    price_enabled = bool(options.get(CONF_PRICE, DEFAULT_PRICE))
+    option_co2_enabled = bool(options.get(CONF_CO2, DEFAULT_CO2))
+    option_price_enabled = bool(options.get(CONF_PRICE, DEFAULT_PRICE))
+
+    co2_override = call.data.get(CONF_CO2)
+    price_override = call.data.get(CONF_PRICE)
+
+    co2_enabled = option_co2_enabled if co2_override is None else bool(co2_override)
+    price_enabled = (
+        option_price_enabled if price_override is None else bool(price_override)
+    )
 
     metrics = _build_metrics(preferences, co2_enabled, price_enabled)
     cost_mapping = _build_cost_mapping(preferences)
@@ -457,8 +467,13 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
     stats_map, metadata = await _collect_statistics(hass, metrics, start, end, bucket)
     totals = _calculate_totals(metrics, stats_map)
 
-    co2_definitions = _build_co2_sensor_definitions(options)
-    price_definitions = _build_price_sensor_definitions(options)
+    co2_definitions: list[CO2SensorDefinition] = []
+    if co2_enabled:
+        co2_definitions = _build_co2_sensor_definitions(options)
+
+    price_definitions: list[PriceSensorDefinition] = []
+    if price_enabled:
+        price_definitions = _build_price_sensor_definitions(options)
 
     co2_totals: dict[str, float] = {}
     if co2_definitions:
@@ -470,7 +485,7 @@ async def _async_handle_generate(hass: HomeAssistant, call: ServiceCall) -> None
         )
 
     price_totals: dict[str, float] = {}
-    if price_enabled and price_definitions:
+    if price_definitions:
         price_totals = await _collect_price_statistics(
             hass,
             start,
