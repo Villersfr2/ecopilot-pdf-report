@@ -62,6 +62,8 @@ class ReportTranslations:
     conclusion_row_import_label: str
     conclusion_row_export_label: str
     conclusion_row_consumption_label: str
+    conclusion_row_total_consumption_label: str
+    conclusion_row_untracked_consumption_label: str
     conclusion_hint: str
     footer_path: str
     footer_page: str
@@ -129,8 +131,8 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
 
         },
         conclusion_title="Conclusion",
-        conclusion_overview_without_battery="Sur la période, la production solaire atteint {production} dont {direct} autoconsommés directement. Les importations réseau totalisent {imported} tandis que {exported} ont été réinjectés, pour une consommation des appareils de {consumption}.",
-        conclusion_overview_with_battery="Sur la période, la production solaire atteint {production} : {direct} ont été autoconsommés directement et {indirect} via la batterie. Les importations réseau totalisent {imported} tandis que {exported} ont été réinjectés, pour une consommation des appareils de {consumption}.",
+        conclusion_overview_without_battery="Sur la période, la production solaire atteint {production} dont {direct} autoconsommés directement. Les importations réseau totalisent {imported} tandis que {exported} ont été réinjectés, pour une consommation des appareils de {consumption}. La consommation totale estimée atteint {total_consumption} dont {untracked_consumption} non suivie.",
+        conclusion_overview_with_battery="Sur la période, la production solaire atteint {production} : {direct} ont été autoconsommés directement et {indirect} via la batterie. Les importations réseau totalisent {imported} tandis que {exported} ont été réinjectés, pour une consommation des appareils de {consumption}. La consommation totale estimée atteint {total_consumption} dont {untracked_consumption} non suivie.",
         conclusion_table_title="Synthèse des flux énergétiques",
         conclusion_table_headers=("Flux", "Total"),
         conclusion_row_direct_label="Autoconsommation directe",
@@ -139,6 +141,8 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         conclusion_row_import_label="Import réseau",
         conclusion_row_export_label="Export réseau",
         conclusion_row_consumption_label="Consommation appareils",
+        conclusion_row_total_consumption_label="Consommation totale estimée",
+        conclusion_row_untracked_consumption_label="Consommation non suivie",
         conclusion_hint="Pour approfondir l'évolution temporelle et comparer les périodes, référez-vous au tableau de bord EcoPilot.",
         footer_path="Chemin du fichier : {path}",
         footer_page="Page {current} sur {total}",
@@ -204,8 +208,8 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
 
         },
         conclusion_title="Conclusion",
-        conclusion_overview_without_battery="Over the period, solar production reached {production} with {direct} consumed directly. Grid imports totalled {imported} while {exported} were sent back, and devices used {consumption}.",
-        conclusion_overview_with_battery="Over the period, solar production reached {production}: {direct} were consumed directly and {indirect} via the battery. Grid imports totalled {imported} while {exported} were sent back, and devices used {consumption}.",
+        conclusion_overview_without_battery="Over the period, solar production reached {production} with {direct} consumed directly. Grid imports totalled {imported} while {exported} were sent back, and devices used {consumption}. Estimated total consumption reached {total_consumption} with {untracked_consumption} untracked.",
+        conclusion_overview_with_battery="Over the period, solar production reached {production}: {direct} were consumed directly and {indirect} via the battery. Grid imports totalled {imported} while {exported} were sent back, and devices used {consumption}. Estimated total consumption reached {total_consumption} with {untracked_consumption} untracked.",
         conclusion_table_title="Energy flow overview",
         conclusion_table_headers=("Flow", "Total"),
         conclusion_row_direct_label="Direct self-consumption",
@@ -214,6 +218,8 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         conclusion_row_import_label="Grid import",
         conclusion_row_export_label="Grid export",
         conclusion_row_consumption_label="Device consumption",
+        conclusion_row_total_consumption_label="Estimated total consumption",
+        conclusion_row_untracked_consumption_label="Untracked consumption",
         conclusion_hint="For deeper time-based analysis and comparisons, refer to EcoPilot's dashboard.",
         footer_path="File path: {path}",
         footer_page="Page {current} of {total}",
@@ -279,8 +285,8 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
 
         },
         conclusion_title="Conclusie",
-        conclusion_overview_without_battery="In de periode bedroeg de zonneproductie {production} waarvan {direct} direct werd zelfverbruikt. Netimport kwam uit op {imported} terwijl {exported} werd teruggeleverd en toestellen verbruikten {consumption}.",
-        conclusion_overview_with_battery="In de periode bedroeg de zonneproductie {production}: {direct} werd rechtstreeks verbruikt en {indirect} via de batterij. Netimport bedroeg {imported} terwijl {exported} werd teruggeleverd en toestellen verbruikten {consumption}.",
+        conclusion_overview_without_battery="In de periode bedroeg de zonneproductie {production} waarvan {direct} direct werd zelfverbruikt. Netimport kwam uit op {imported} terwijl {exported} werd teruggeleverd en toestellen verbruikten {consumption}. De geschatte totale consumptie bedraagt {total_consumption}, waarvan {untracked_consumption} niet gevolgd.",
+        conclusion_overview_with_battery="In de periode bedroeg de zonneproductie {production}: {direct} werd rechtstreeks verbruikt en {indirect} via de batterij. Netimport bedroeg {imported} terwijl {exported} werd teruggeleverd en toestellen verbruikten {consumption}. De geschatte totale consumptie bedraagt {total_consumption}, waarvan {untracked_consumption} niet gevolgd.",
         conclusion_table_title="Overzicht energiestromen",
         conclusion_table_headers=("Stroom", "Totaal"),
         conclusion_row_direct_label="Direct eigen verbruik",
@@ -289,6 +295,8 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         conclusion_row_import_label="Netimport",
         conclusion_row_export_label="Netexport",
         conclusion_row_consumption_label="Verbruik toestellen",
+        conclusion_row_total_consumption_label="Geschatte totale consumptie",
+        conclusion_row_untracked_consumption_label="Niet gevolgde consumptie",
         conclusion_hint="Raadpleeg het Energiadashboard van EcoPilot voor een diepere tijdsanalyse en vergelijkingen.",
         footer_path="Bestandspad: {path}",
         footer_page="Pagina {current} van {total}",
