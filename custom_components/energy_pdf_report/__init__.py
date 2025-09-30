@@ -1546,14 +1546,50 @@ def _build_pdf(
 
 
     summary_rows, summary_series = _prepare_summary_rows(metrics, totals, metadata)
+    conclusion_summary = _prepare_conclusion_summary(
+        metrics,
+        totals,
+        metadata,
+    )
+
+    summary_display_rows = list(summary_rows)
+    summary_emphasize_rows: list[int] = list(range(len(summary_display_rows)))
+
+    if conclusion_summary:
+        energy_unit = conclusion_summary.energy_unit or ""
+        total_consumption = (
+            conclusion_summary.production
+            + conclusion_summary.imported
+            + conclusion_summary.discharge
+            - conclusion_summary.exported
+            - conclusion_summary.charge
+        )
+        tracked_consumption = conclusion_summary.consumption
+        untracked_consumption = max(total_consumption - tracked_consumption, 0.0)
+
+        summary_display_rows = [
+            (
+                translations.summary_row_total_consumption_label,
+                _format_number(total_consumption),
+                energy_unit,
+            ),
+            *summary_rows,
+            (
+                translations.summary_row_untracked_consumption_label,
+                _format_number(untracked_consumption),
+                energy_unit,
+            ),
+        ]
+        summary_emphasize_rows = [0, len(summary_display_rows) - 1]
+
     summary_widths = builder.compute_column_widths((0.55, 0.27, 0.18))
     builder.add_table(
         TableConfig(
             title=translations.summary_table_title,
             headers=translations.summary_headers,
-            rows=summary_rows,
+            rows=summary_display_rows,
             column_widths=summary_widths,
-            emphasize_rows=list(range(len(summary_rows))),
+            emphasize_rows=summary_emphasize_rows,
 
             first_column_is_category=True,
         )
@@ -1687,13 +1723,6 @@ def _build_pdf(
 
 
     conclusion_summary = None
-    if summary_series:
-        conclusion_summary = _prepare_conclusion_summary(
-            metrics,
-            totals,
-            metadata,
-        )
-
     if conclusion_summary:
         builder.add_section_title(translations.conclusion_title)
 
