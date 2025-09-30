@@ -59,14 +59,14 @@ _CATEGORY_COLORS: Tuple[Tuple[str, Tuple[int, int, int]], ...] = (
 
 _CATEGORY_ICON_HINTS: Tuple[Tuple[str, str], ...] = (
 
-    ("solaire", "🌞"),
+    ("solaire", "☀"),
     ("réseau", "⚡"),
     ("électricité", "⚡"),
     ("consommation", "⚡"),
     ("appareil", "🔌"),
     ("gaz", "🔥"),
     ("eau", "💧"),
-    ("batterie", "🔋"),
+    ("batterie", "⏻"),
     ("co₂", "🌍"),
     ("co2", "🌍"),
     ("coût", "💰"),
