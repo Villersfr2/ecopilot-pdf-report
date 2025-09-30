@@ -31,6 +31,7 @@ from .const import (
     CONF_PRICE_ELECTRICITY_IMPORT,
     CONF_PRICE_GAS,
     CONF_PRICE_WATER,
+    CONF_OPENAI_API_KEY,
     DEFAULT_CO2,
     DEFAULT_CO2_ELECTRICITY_SENSOR,
     DEFAULT_CO2_GAS_SENSOR,
@@ -74,6 +75,7 @@ BASE_DEFAULTS: dict[str, Any] = {
     CONF_LANGUAGE: DEFAULT_LANGUAGE,
     CONF_CO2: DEFAULT_CO2,
     CONF_PRICE: DEFAULT_PRICE,
+    CONF_OPENAI_API_KEY: "",
 }
 for option_key, default in CO2_SENSOR_DEFAULTS:
     BASE_DEFAULTS[option_key] = default
@@ -121,6 +123,12 @@ def _build_schema(defaults: Mapping[str, Any]) -> vol.Schema:
         schema_dict[
             vol.Optional(option_key, default=defaults[option_key])
         ] = cv.string
+
+    schema_dict[
+        vol.Optional(
+            CONF_OPENAI_API_KEY, default=defaults[CONF_OPENAI_API_KEY]
+        )
+    ] = cv.string
 
     return vol.Schema(schema_dict)
 

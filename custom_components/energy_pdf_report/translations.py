@@ -65,6 +65,7 @@ class ReportTranslations:
     conclusion_row_total_consumption_label: str
     conclusion_row_untracked_consumption_label: str
     conclusion_hint: str
+    advice_section_title: str
     footer_path: str
     footer_page: str
     footer_generated: str
@@ -144,6 +145,7 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         conclusion_row_total_consumption_label="Consommation totale estimée",
         conclusion_row_untracked_consumption_label="Consommation non suivie",
         conclusion_hint="Pour approfondir l'évolution temporelle et comparer les périodes, référez-vous au tableau de bord EcoPilot.",
+        advice_section_title="Les conseils personnalisés EcoPilot",
         footer_path="Chemin du fichier : {path}",
         footer_page="Page {current} sur {total}",
         footer_generated="Généré le {timestamp}",
@@ -221,6 +223,7 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         conclusion_row_total_consumption_label="Estimated total consumption",
         conclusion_row_untracked_consumption_label="Untracked consumption",
         conclusion_hint="For deeper time-based analysis and comparisons, refer to EcoPilot's dashboard.",
+        advice_section_title="EcoPilot tailored advice",
         footer_path="File path: {path}",
         footer_page="Page {current} of {total}",
         footer_generated="Generated on {timestamp}",
@@ -298,6 +301,7 @@ _TRANSLATIONS: dict[str, ReportTranslations] = {
         conclusion_row_total_consumption_label="Geschatte totale consumptie",
         conclusion_row_untracked_consumption_label="Niet gevolgde consumptie",
         conclusion_hint="Raadpleeg het Energiadashboard van EcoPilot voor een diepere tijdsanalyse en vergelijkingen.",
+        advice_section_title="EcoPilot persoonlijk advies",
         footer_path="Bestandspad: {path}",
         footer_page="Pagina {current} van {total}",
         footer_generated="Gegenereerd op {timestamp}",
