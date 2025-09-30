@@ -1,14 +1,14 @@
-# Energy PDF Report
+# EcoPilot PDF Reporting Tool
 
-Ce composant personnalisé Home Assistant ajoute un service `energy_pdf_report.generate` permettant de générer un rapport PDF à partir des statistiques du tableau de bord Énergie. Le fichier PDF inclut une synthèse par catégorie ainsi qu'un détail de toutes les statistiques utilisées.
+Ce composant personnalisé Home Assistant ajoute un service `ecopilot_pdf_report.generate` permettant de générer un rapport PDF à partir des statistiques du tableau de bord Énergie. Le fichier PDF inclut une synthèse par catégorie ainsi qu'un détail de toutes les statistiques utilisées.
 
 Le résumé met désormais en avant la consommation totale estimée (production + importations + décharge − exportations − charge) et la part non suivie, calculée en soustrayant la consommation des appareils suivis du total estimé.
 
 ## Installation rapide
-1. Copier le dossier `energy_pdf_report` dans le répertoire `custom_components` de votre installation Home Assistant.
+1. Copier le dossier `ecopilot_pdf_report` dans le répertoire `custom_components` de votre installation Home Assistant.
 2. Redémarrer Home Assistant.
-3. Depuis **Paramètres → Appareils et services → Ajouter une intégration**, sélectionner **Energy PDF Report** pour créer l'entrée de configuration.
-4. Le service `energy_pdf_report.generate` devient alors disponible dans l'outil Développeur > Services et peut être utilisé dans vos automatisations.
+3. Depuis **Paramètres → Appareils et services → Ajouter une intégration**, sélectionner **EcoPilot PDF Reporting Tool** pour créer l'entrée de configuration.
+4. Le service `ecopilot_pdf_report.generate` devient alors disponible dans l'outil Développeur > Services et peut être utilisé dans vos automatisations.
 
 
 ## Paramètres du service
@@ -17,7 +17,7 @@ Le résumé met désormais en avant la consommation totale estimée (production 
 
 - `period` *(optionnel)* : granularité des statistiques (`day`, `week` ou `month`). Si omis, la valeur définie dans les options de l'intégration est appliquée (par défaut `day`).
 - `filename` *(optionnel)* : nom du fichier PDF à générer (l'extension `.pdf` est ajoutée automatiquement si nécessaire). Si omis, le modèle défini dans les options de l'intégration est utilisé.
-- `output_dir` *(optionnel)* : répertoire de sortie relatif au dossier de configuration ou chemin absolu. Par défaut, celui défini dans les options de l'intégration (initialement `www/energy_reports`).
+- `output_dir` *(optionnel)* : répertoire de sortie relatif au dossier de configuration ou chemin absolu. Par défaut, celui défini dans les options de l'intégration (initialement `www/ecopilot_reports`).
 
 - `dashboard` *(optionnel)* : identifiant ou nom du tableau de bord Énergie à analyser. Si omis, le tableau actif par défaut est utilisé.
 
@@ -30,7 +30,7 @@ Le fichier généré est également signalé via une notification persistante da
 
 ## Options de configuration
 
-Depuis la page **Paramètres → Appareils et services**, ouvrez l'intégration **Energy PDF Report** puis choisissez **Options** pour personnaliser les valeurs par défaut suivantes :
+Depuis la page **Paramètres → Appareils et services**, ouvrez l'intégration **EcoPilot PDF Reporting Tool** puis choisissez **Options** pour personnaliser les valeurs par défaut suivantes :
 
 - **Répertoire de sortie** : dossier utilisé pour stocker les rapports lorsqu'aucun répertoire n'est fourni au service.
 - **Période par défaut** : granularité (`day`, `week`, `month`) appliquée si l'appel au service ne précise pas de période.

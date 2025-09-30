@@ -1,4 +1,4 @@
-"""Génération de rapports PDF pour l'intégration energy_pdf_report."""
+"""Génération de rapports PDF pour l'intégration ecopilot_pdf_report."""
 
 import base64
 import zlib
@@ -90,7 +90,7 @@ class _TemporaryFontCache:
     """Stockage temporaire des polices nécessaires à FPDF."""
 
     def __init__(self) -> None:
-        self._tempdir = TemporaryDirectory(prefix="energy_pdf_report_fonts_")
+        self._tempdir = TemporaryDirectory(prefix="ecopilot_pdf_report_fonts_")
         self.directory = Path(self._tempdir.name)
         self._populate()
 
@@ -138,7 +138,7 @@ class TableConfig:
     first_column_is_category: bool = False
 
 
-class EnergyReportPDF(FPDF):
+class EcoPilotReportPDF(FPDF):
     """PDF thématisé avec en-tête et pied de page personnalisés."""
 
 
@@ -194,7 +194,7 @@ class EnergyReportPDF(FPDF):
         self.set_text_color(*TEXT_COLOR)
 
 
-class EnergyPDFBuilder:
+class EcoPilotPDFBuilder:
     """Constructeur simplifié de rapports PDF professionnels."""
 
     def __init__(
@@ -208,7 +208,7 @@ class EnergyPDFBuilder:
         """Initialiser le générateur de PDF."""
 
         self._translations = translations
-        self._pdf = EnergyReportPDF(title, period_label, generated_at, translations)
+        self._pdf = EcoPilotReportPDF(title, period_label, generated_at, translations)
         self._pdf.set_auto_page_break(auto=True, margin=18)
         self._pdf.alias_nb_pages()
         self._font_cache = _register_unicode_fonts(self._pdf)
@@ -217,7 +217,7 @@ class EnergyPDFBuilder:
         self._content_started = False
         self._pdf.set_title(title)
         self._pdf.set_creator("Home Assistant")
-        self._pdf.set_author("energy_pdf_report")
+        self._pdf.set_author("ecopilot_pdf_report")
         self._default_text_color = TEXT_COLOR
 
     @property
@@ -619,4 +619,4 @@ def _format_number(value: float) -> str:
 
 
 
-__all__ = ["EnergyPDFBuilder", "TableConfig"]
+__all__ = ["EcoPilotPDFBuilder", "TableConfig"]

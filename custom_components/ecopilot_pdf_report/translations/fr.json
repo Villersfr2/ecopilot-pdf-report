@@ -28,19 +28,19 @@
         }
       },
       "reinstall_confirm": {
-        "title": "Remplacer la configuration existante",
-        "description": "Une configuration Energy PDF Report (« {title} ») est déjà présente. Validez pour la supprimer et la réinstaller."
+        "title": "Remplacer la configuration EcoPilot PDF Reporting Tool",
+        "description": "Une configuration EcoPilot PDF Reporting Tool (« {title} ») est déjà présente. Validez pour la supprimer et la réinstaller."
       }
     },
     "abort": {
       "remove_failed": "La suppression de l'ancienne configuration a échoué. Réessayez depuis Paramètres > Appareils et services.",
-      "already_configured": "Energy PDF Report est déjà configuré."
+      "already_configured": "EcoPilot PDF Reporting Tool est déjà configuré."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Options du rapport PDF énergie",
+        "title": "Options EcoPilot PDF Reporting Tool",
         "description": "Définissez le répertoire de sortie, la période par défaut et le modèle de nom de fichier utilisés lors de la génération des PDF.",
         "data": {
 

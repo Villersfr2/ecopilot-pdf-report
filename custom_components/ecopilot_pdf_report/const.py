@@ -1,8 +1,8 @@
-"""Constantes de l'intégration energy_pdf_report."""
+"""Constantes de l'intégration ecopilot_pdf_report."""
 
 from __future__ import annotations
 
-DOMAIN = "energy_pdf_report"
+DOMAIN = "ecopilot_pdf_report"
 SERVICE_GENERATE_REPORT = "generate"
 DEFAULT_PERIOD = "day"
 VALID_PERIODS: tuple[str, ...] = ("day", "week", "month")
@@ -10,8 +10,8 @@ VALID_PERIODS: tuple[str, ...] = ("day", "week", "month")
 DEFAULT_REPORT_TYPE = "week"
 
 VALID_REPORT_TYPES = VALID_PERIODS
-DEFAULT_OUTPUT_DIR = "www/energy_reports"
-DEFAULT_FILENAME_PATTERN = "energy_report_{start}_{end}.pdf"
+DEFAULT_OUTPUT_DIR = "www/ecopilot_reports"
+DEFAULT_FILENAME_PATTERN = "ecopilot_report_{start}_{end}.pdf"
 DEFAULT_LANGUAGE = "fr"
 SUPPORTED_LANGUAGES: tuple[str, ...] = ("fr", "nl", "en")
 
@@ -53,4 +53,4 @@ DEFAULT_CO2 = False
 DEFAULT_PRICE = False
 
 
-PDF_TITLE = "Rapport énergie"
+PDF_TITLE = "Rapport EcoPilot"

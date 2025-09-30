@@ -1,4 +1,4 @@
-"""Flux de configuration pour l'intégration Energy PDF Report."""
+"""Flux de configuration pour l'intégration EcoPilot PDF Reporting Tool."""
 
 from __future__ import annotations
 
@@ -133,8 +133,8 @@ def _build_schema(defaults: Mapping[str, Any]) -> vol.Schema:
     return vol.Schema(schema_dict)
 
 
-class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Config flow for Energy PDF Report."""
+class EcoPilotPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Config flow for the EcoPilot PDF Reporting Tool."""
 
     VERSION = 1
 
@@ -153,7 +153,7 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._cached_existing_values = None
 
             return self.async_create_entry(
-                title="Energy PDF Report",
+                title="EcoPilot PDF Reporting Tool",
                 data=user_input,
             )
 
@@ -167,7 +167,7 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     **dict(entry.options),
                 }
                 self.context["title_placeholders"] = {
-                    "title": entry.title or "Energy PDF Report",
+                    "title": entry.title or "EcoPilot PDF Reporting Tool",
                 }
                 return await self.async_step_reinstall_confirm()
 
@@ -211,8 +211,8 @@ class EnergyPDFReportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return await self.async_step_user()
 
 
-class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
-    """Gérer les options pour Energy PDF Report."""
+class EcoPilotPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
+    """Gérer les options pour EcoPilot PDF Reporting Tool."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialiser le flow d’options."""
@@ -221,7 +221,7 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Gérer les options Energy PDF Report."""
+        """Gérer les options EcoPilot PDF Reporting Tool."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
@@ -240,4 +240,4 @@ class EnergyPDFReportOptionsFlowHandler(config_entries.OptionsFlow):
 
 async def async_get_options_flow(config_entry: config_entries.ConfigEntry):
     """Retourner le gestionnaire d’options."""
-    return EnergyPDFReportOptionsFlowHandler(config_entry)
+    return EcoPilotPDFReportOptionsFlowHandler(config_entry)
