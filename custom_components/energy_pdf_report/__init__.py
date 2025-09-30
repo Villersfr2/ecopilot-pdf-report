@@ -24,7 +24,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.config_entries import ConfigEntry
 
-from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import config_validation as cv, entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
 
@@ -1173,6 +1173,36 @@ async def _collect_statistics(
             raise
 
 
+    entity_registry = er.async_get(hass)
+    states = hass.states
+
+    for statistic_id in statistic_ids:
+        entry = metadata.get(statistic_id)
+        if not entry:
+            continue
+
+        meta = entry[1]
+
+        current_name = meta.get("name")
+        current_name_str = str(current_name).strip() if current_name is not None else ""
+        if current_name_str and current_name_str != statistic_id:
+            continue
+
+        friendly_name: str | None = None
+
+        state = states.get(statistic_id)
+        if state and state.name and state.name.strip():
+            friendly_name = state.name.strip()
+        else:
+            registry_entry = entity_registry.async_get(statistic_id)
+            if registry_entry:
+                registry_name = registry_entry.name or registry_entry.original_name
+                if registry_name:
+                    friendly_name = str(registry_name).strip()
+
+        if friendly_name:
+            meta["name"] = friendly_name
+
     stats_map = await instance.async_add_executor_job(
         recorder_statistics.statistics_during_period,
         hass,
@@ -1741,8 +1771,10 @@ def _extract_name(
     if metadata:
         # Essayer le friendly_name stocké dans les métadonnées
         name = metadata[1].get("name")
-        if name and str(name).strip():
-            return str(name)
+        if name is not None:
+            name_str = str(name).strip()
+            if name_str:
+                return name_str
 
         # Essayer une description éventuelle
         desc = metadata[1].get("statistic_id")
