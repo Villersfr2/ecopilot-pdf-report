@@ -1,4 +1,4 @@
-"""Intégration personnalisée pour générer un rapport énergie en PDF."""
+"""Intégration EcoPilot pour générer un rapport énergie en PDF."""
 
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ from .const import (
     VALID_PERIODS,
 )
 from .ai_helper import FALLBACK_MESSAGE, generate_advice
-from .pdf import EnergyPDFBuilder, TableConfig, _decorate_category
+from .pdf import EcoPilotPDFBuilder, TableConfig, _decorate_category
 
 from .translations import ReportTranslations, get_report_translations
 
@@ -1546,7 +1546,7 @@ def _build_pdf(
         start=display_start.strftime("%d/%m/%Y"),
         end=display_end.strftime("%d/%m/%Y"),
     )
-    builder = EnergyPDFBuilder(
+    builder = EcoPilotPDFBuilder(
         translations.pdf_title,
         period_label=period_label,
         generated_at=generated_at,

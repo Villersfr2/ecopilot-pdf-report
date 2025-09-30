@@ -20,7 +20,7 @@ generate:
     output_dir:
       name: Répertoire de sortie
       description: Répertoire relatif au dossier de configuration ou chemin absolu pour stocker les rapports. Par défaut, le répertoire défini dans les options est utilisé.
-      example: www/energy_reports
+      example: www/ecopilot_reports
 
 
     language:
