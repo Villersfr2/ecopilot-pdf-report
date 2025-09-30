@@ -1722,7 +1722,6 @@ def _build_pdf(
 
 
 
-    conclusion_summary = None
     if conclusion_summary:
         builder.add_section_title(translations.conclusion_title)
 
