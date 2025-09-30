@@ -31,7 +31,9 @@ BORDER_COLOR = (222, 230, 236)
 ZEBRA_COLORS = ((255, 255, 255), (245, 249, 252))
 TOTAL_FILL_COLOR = (235, 239, 243)
 TOTAL_TEXT_COLOR = (87, 96, 106)
-SECTION_SPACING = 6
+SECTION_SPACING = 9
+SECTION_TITLE_SPACING = 4
+TABLE_BOTTOM_SPACING = 3
 
 CHART_BACKGROUND = (245, 249, 253)
 BAR_TRACK_COLOR = (226, 235, 243)
@@ -279,7 +281,7 @@ class EnergyPDFBuilder:
         self._pdf.set_text_color(*PRIMARY_COLOR)
         self._pdf.set_font(FONT_FAMILY, "B", 15)
         self._pdf.cell(0, 10, text, ln=True)
-        self._pdf.ln(2)
+        self._pdf.ln(SECTION_TITLE_SPACING)
         self._pdf.set_text_color(*self._default_text_color)
 
     def add_paragraph(self, text: str, bold: bool = False, size: int = 11) -> None:
@@ -330,7 +332,7 @@ class EnergyPDFBuilder:
             empty_row = [self._translations.table_empty] + [""] * (len(headers) - 1)
 
             self._draw_row(empty_row, column_widths, row_height, fill=True)
-            self._pdf.ln(1)
+            self._pdf.ln(TABLE_BOTTOM_SPACING)
             return
 
         emphasize = set(config.emphasize_rows or [])
@@ -358,7 +360,7 @@ class EnergyPDFBuilder:
                 font_style=font_style,
             )
 
-        self._pdf.ln(1)
+        self._pdf.ln(TABLE_BOTTOM_SPACING)
         self._pdf.set_text_color(*self._default_text_color)
 
     def add_chart(
