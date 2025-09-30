@@ -72,7 +72,7 @@ async def generate_advice(conclusion: str, api_key: str | None, language: str) -
             },
         ],
         "temperature": 0.6,
-        "max_tokens": 320,
+        "max_tokens": 600,
     }
 
     headers = {
