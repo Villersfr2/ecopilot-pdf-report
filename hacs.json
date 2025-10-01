@@ -1,7 +1,7 @@
 {
-  "name": "EcoPilot PDF Reporting Tool",
+  "name": "Energy PDF Report",
   "content_in_root": false,
   "render_readme": true,
-  "domains": ["ecopilot_pdf_report"],
+  "domains": ["energy_pdf_report"],
   "homeassistant": "2024.6.0"
 }
