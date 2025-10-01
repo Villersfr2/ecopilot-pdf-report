@@ -1,0 +1,7 @@
+{
+  "config": {
+    "abort": {
+      "integration_migrated": "L'intégration Energy PDF Report a été remplacée par EcoPilot PDF Reporting Tool. Veuillez supprimer cette entrée et installer la nouvelle intégration depuis HACS."
+    }
+  }
+}

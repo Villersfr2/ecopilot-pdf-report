@@ -1,0 +1,11 @@
+{
+  "domain": "energy_pdf_report",
+  "name": "Energy PDF Report (Legacy)",
+  "version": "1.0.0",
+  "documentation": "https://github.com/Villersfr2/ecopilot-pdf-report",
+  "issue_tracker": "https://github.com/Villersfr2/ecopilot-pdf-report/issues",
+  "requirements": ["fpdf2>=2.8.4"],
+  "codeowners": ["@Villersfr2"],
+  "config_flow": true,
+  "integration_type": "helper"
+}
